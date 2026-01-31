@@ -1,0 +1,189 @@
+/* ================= GLOBAL RESET ================= */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: "Segoe UI", system-ui, sans-serif;
+}
+
+body {
+  background: #0b0f1a;
+  color: #eaeaf0;
+  padding: 100px 16px 40px;
+}
+
+/* ================= TOP BAR ================= */
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 72px;
+  width: 100%;
+  background: linear-gradient(90deg, #0f172a, #020617);
+  border-bottom: 1px solid #1e293b;
+  z-index: 10;
+}
+
+
+/* ================= BUTTON ================= */
+.top-actions {
+  position: fixed;
+  top: 18px;
+  right: 16px;
+  display: flex;
+  gap: 10px;
+  z-index: 12;
+}
+.top-actions button {
+  background: #020617;
+  color: #eaeaf0;
+  border: 1px solid #1e293b;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 8px 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.top-actions button:hover {
+  background: rgba(99,102,241,0.15);
+  transform: scale(1.05);
+}
+.admin-btn {
+  background: linear-gradient(135deg, #ef4444, #dc2626) !important;
+  border: none !important;
+  box-shadow: 0 0 12px rgba(239,68,68,0.5);
+}
+/* ================= REGISTER BUTTON ================= */
+.register-btn {
+  display: inline-block;
+  margin: 10px 0 6px;
+  padding: 6px 14px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 14px;
+  text-decoration: none;
+  color: #0f172a;
+  background: linear-gradient(135deg, #33ff00, #00ffbb);
+  box-shadow: 0 0 10px rgba(2, 255, 217, 0.45);
+  transition: all 0.2s ease;
+}
+
+.register-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 16px rgba(195, 255, 54, 0.75);
+}
+
+
+/* ================= SECTIONS ================= */
+.section {
+  max-width: 1100px;
+  margin: 0 auto 48px;
+}
+
+h2 {
+  margin-bottom: 6px;
+  font-size: 1.4rem;
+}
+
+p {
+  color: #9ca3af;
+  margin-bottom: 14px;
+  font-size: 0.9rem;
+}
+
+h3 {
+  margin-top: 36px;
+  margin-bottom: 6px;
+}
+
+/* ================= TABLE STYLING ================= */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+  background: #020617;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+thead {
+  background: #020617;
+}
+
+th, td {
+  padding: 12px 10px;
+  text-align: left;
+  font-size: 0.85rem;
+}
+
+th {
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+tbody tr {
+  border-top: 1px solid #1e293b;
+}
+
+tbody tr:hover {
+  background: rgba(99,102,241,0.08);
+}
+
+/* Rank highlights */
+.rank-1 {
+  background: rgba(234,179,8,0.12);
+}
+
+.rank-2 {
+  background: rgba(148,163,184,0.12);
+}
+
+.rank-3 {
+  background: rgba(202,138,4,0.12);
+}
+
+small {
+  color: #9ca3af;
+}
+
+/* ================= RESPONSIVE ================= */
+@media (max-width: 768px) {
+  body {
+    padding-top: 120px;
+  }
+
+  th, td {
+    font-size: 0.75rem;
+    padding: 8px 6px;
+  }
+
+  h2 {
+    font-size: 1.2rem;
+  }
+
+  body::after {
+    width: 38px;
+    height: 38px;
+    top: 18px;
+  }
+
+  .section:first-of-type::before {
+    font-size: 1.05rem;
+    top: 24px;
+    left: 64px;
+  }
+
+  .top-actions {
+    top: 14px;
+    right: 10px;
+    gap: 6px;
+  }
+
+  .top-actions button {
+    font-size: 0.7rem;
+    padding: 6px 10px;
+  }
+}
