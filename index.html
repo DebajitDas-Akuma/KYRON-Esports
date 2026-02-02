@@ -27,6 +27,33 @@
   </button>
 </div>
 
+<div class="section info-section">
+  <h2>🚀 About Kyron Esports</h2>
+
+  <p>
+    Kyron Esports is a competitive gaming community built to identify, rank,
+    and promote skilled players through structured tournaments and transparent
+    performance metrics.
+  </p>
+
+  <h3>🎯 Our Objective</h3>
+  <p>
+    Our goal is to grow Kyron Esports into a <strong>national-level esports club</strong>,
+    providing fair competition, recognition, and opportunities for players
+    to showcase their skills across India.
+  </p>
+
+  <h3>📊 Ranking Calculation</h3>
+  <p>
+    Player rankings are calculated using an <strong>average rank points system</strong>.
+    For each player:
+  </p>
+  <ul>
+    <li>Rank points from every match are added</li>
+    <li>Total points are divided by matches played</li>
+    <li>This ensures consistency is rewarded, not just one good match</li>
+  </ul>
+</div>
 
 <div class="section">
   <h2>🌍 Global Leaderboard</h2>
@@ -43,6 +70,10 @@
     </thead>
     <tbody id="leaderboard"></tbody>
   </table>
+  <button id="toggleGlobal" style="margin-top:12px">
+    📂 Show Full Leaderboard
+  </button>
+
 </div>
 
 
@@ -110,24 +141,42 @@ const ranked = Object.values(players)
   .sort((a, b) => b.avgPoints - a.avgPoints);
 
 leaderboardBody.innerHTML = "";
-ranked.forEach((p, i) => {
-  const rankClass =
-    i === 0 ? "rank-1" :
-    i === 1 ? "rank-2" :
-    i === 2 ? "rank-3" : "";
+let showAll = false;
 
-  leaderboardBody.innerHTML += `
-    <tr class="${rankClass}">
-      <td>#${i + 1}</td>
-      <td>
-        <strong>${p.name}</strong><br>
-        <small>UID: ${p.uid}</small>
-      </td>
-      <td>${p.matches}</td>
-      <td>${p.avgPoints.toFixed(3)}</td>
-    </tr>
-  `;
-});
+function renderGlobalLeaderboard() {
+  leaderboardBody.innerHTML = "";
+
+  const list = showAll ? ranked : ranked.slice(0, 10);
+
+  list.forEach((p, i) => {
+    const rankClass =
+      i === 0 ? "rank-1" :
+      i === 1 ? "rank-2" :
+      i === 2 ? "rank-3" : "";
+
+    leaderboardBody.innerHTML += `
+      <tr class="${rankClass}">
+        <td>#${i + 1}</td>
+        <td>
+          <strong>${p.name}</strong><br>
+          <small>UID: ${p.uid}</small>
+        </td>
+        <td>${p.matches}</td>
+        <td>${p.avgPoints.toFixed(3)}</td>
+      </tr>
+    `;
+  });
+}
+
+renderGlobalLeaderboard();
+
+document.getElementById("toggleGlobal").onclick = () => {
+  showAll = !showAll;
+  document.getElementById("toggleGlobal").innerText =
+    showAll ? "📁 Hide Full Leaderboard" : "📂 Show Full Leaderboard";
+  renderGlobalLeaderboard();
+};
+
 
 
 // ================= MATCH-WISE LEADERBOARDS =================
@@ -205,32 +254,80 @@ if (m.formLink) {
 }
 
 
-  matchContainer.innerHTML += `
-    <h3>${m.matchName || "Unnamed Match"}</h3>
-    ${registerBtn}
-    <p>
-      <strong>Game:</strong> ${m.game || "-"} |
-      <strong>Mode:</strong> ${m.mode || "-"}<br>
-      <small>Date: ${dateStr}</small>
-    </p>
+const top3 = playersArr.slice(0, 3);
+const rest = playersArr.slice(3);
 
+let topRows = "";
+top3.forEach((p, i) => {
+  topRows += `
+    <tr>
+      <td>#${i + 1}</td>
+      <td>${p.name}</td>
+      <td>${p.rankPoints || 0}</td>
+      <td>${p.kills || 0}</td>
+      <td>${p.damage || 0}</td>
+      <td>${p.knockdowns || 0}</td>
+    </tr>
+  `;
+});
+
+let restRows = "";
+rest.forEach((p, i) => {
+  restRows += `
+    <tr>
+      <td>#${i + 4}</td>
+      <td>${p.name}</td>
+      <td>${p.rankPoints || 0}</td>
+      <td>${p.kills || 0}</td>
+      <td>${p.damage || 0}</td>
+      <td>${p.knockdowns || 0}</td>
+    </tr>
+  `;
+});
+
+const cardId = `match-${matchDoc.id}`;
+
+matchContainer.innerHTML += `
+  <div class="match-card">
+    <h3>${m.matchName || "Unnamed Match"}</h3>
+
+    <div class="match-meta">
+      <strong>Game:</strong> ${m.game || "-"} |
+      <strong>Mode:</strong> ${m.mode || "-"} |
+      <strong>Date:</strong> ${dateStr}<br>
+      <strong>Registered Players:</strong> ${playersArr.length}
+    </div>
+
+    ${registerBtn}
 
     <table>
       <thead>
         <tr>
-          <th>#</th>
-          <th>Player</th>
-          <th>Rank Points</th>
-          <th>Kills</th>
-          <th>Damage</th>
-          <th>Knockdowns</th>
+          <th>#</th><th>Player</th><th>RP</th><th>K</th><th>Dmg</th><th>Kn</th>
         </tr>
       </thead>
       <tbody>
-        ${rows || "<tr><td colspan='6'>No data</td></tr>"}
+        ${topRows}
+      </tbody>
+      <tbody id="${cardId}" style="display:none">
+        ${restRows}
       </tbody>
     </table>
-  `;
+
+    ${rest.length ? `
+      <button class="drawer-btn"
+        onclick="
+          const el = document.getElementById('${cardId}');
+          el.style.display = el.style.display === 'none' ? 'table-row-group' : 'none';
+          event.target.innerText =
+            el.style.display === 'none' ? '📂 Show All Players' : '📁 Hide Players';
+        ">
+        📂 Show All Players
+      </button>
+    ` : ""}
+  </div>
+`;
+
 }
 </script>
 
