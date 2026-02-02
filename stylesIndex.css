@@ -177,17 +177,21 @@ small {
 
 /* ================= RESPONSIVE ================= */
 @media (max-width: 768px) {
+
   body {
     padding-top: 120px;
+    font-size: 16px;
+    line-height: 1.6;
   }
 
+  /* TABLE TEXT – readable */
   th, td {
-    font-size: 0.75rem;
-    padding: 8px 6px;
+    font-size: 0.95rem;
+    padding: 10px 8px;
   }
 
   h2 {
-    font-size: 1.2rem;
+    font-size: 1.35rem;
   }
 
   body::after {
@@ -202,18 +206,19 @@ small {
     left: 64px;
   }
 
+  /* TOP ACTION BUTTONS */
   .top-actions {
     top: 14px;
     right: 10px;
-    gap: 6px;
+    gap: 8px;
   }
 
   .top-actions button {
-    font-size: 0.7rem;
-    padding: 6px 10px;
+    font-size: 0.85rem;
+    padding: 8px 12px;
   }
 
-
+  /* CARD STYLE TABLE (GLOBAL LB) */
   table {
     border: none;
     background: transparent;
@@ -228,8 +233,8 @@ small {
     background: #020617;
     border: 1px solid #1e293b;
     border-radius: 12px;
-    margin-bottom: 12px;
-    padding: 10px 12px;
+    margin-bottom: 14px;
+    padding: 12px 14px;
   }
 
   tbody td {
@@ -237,7 +242,7 @@ small {
     justify-content: space-between;
     padding: 6px 0;
     border: none;
-    font-size: 0.85rem;
+    font-size: 0.95rem;
   }
 
   tbody td:first-child {
@@ -248,11 +253,11 @@ small {
   tbody td:nth-child(2) {
     flex-direction: column;
     align-items: flex-start;
-    gap: 2px;
+    gap: 4px;
   }
 
   tbody td small {
-    font-size: 0.7rem;
+    font-size: 0.8rem;
   }
 
   tbody td:nth-child(3)::before {
@@ -264,6 +269,8 @@ small {
     content: "Avg RP";
     color: #9ca3af;
   }
+
+  /* MATCH CARD TABLE */
   .match-card table tbody tr {
     display: block;
     padding: 10px 0;
@@ -272,8 +279,8 @@ small {
   .match-card table td {
     display: flex;
     justify-content: space-between;
-    padding: 4px 0;
-    font-size: 0.8rem;
+    padding: 5px 0;
+    font-size: 0.9rem;
   }
 
   .match-card table td::before {
@@ -288,6 +295,7 @@ small {
   .match-card table td:nth-child(5)::before { content: "Damage"; }
   .match-card table td:nth-child(6)::before { content: "Knockdowns"; }
 
+  /* TOP 3 HIGHLIGHT */
   .match-card tbody tr:nth-child(1) {
     background: linear-gradient(90deg, rgba(234,179,8,0.18), transparent);
   }
@@ -298,3 +306,5 @@ small {
     background: linear-gradient(90deg, rgba(202,138,4,0.18), transparent);
   }
 }
+
+
