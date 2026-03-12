@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<body style="text-align:center;font-family:Arial;background:#0b1026;color:white">
+
+<h1>Admin Login</h1>
+
+<!-- EMAIL INPUT -->
+<input type="email" id="email" placeholder="Email">
+<br><br>
+
+<!-- PASSWORD INPUT -->
+<input type="password" id="pass" placeholder="Password">
+<br><br>
+
+<button id="loginBtn">Enter</button>
+
+<script type="module">
+import { auth, signInWithEmailAndPassword, db, doc, getDoc } from "./firebase.js";
+
+const loginBtn = document.getElementById("loginBtn");
+
+loginBtn.addEventListener("click", async () => {
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("pass").value;
+
+    if (!email || !password) {
+        alert("Please enter email and password.");
+        return;
+    }
+
+    try {
+        console.log("Attempting login for:", email);
+        // Firebase Auth login
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+        console.log("Logged in UID:", user.uid);
+
+        // Check if user UID exists in admins collection
+        const adminDocRef = doc(db, "admins", user.uid);
+        const adminDoc = await getDoc(adminDocRef);
+
+        if (adminDoc.exists()) {
+            console.log("Admin verified. Redirecting to admin.html...");
+            window.location.href = "admin.html";
+        } else {
+            alert("Access Denied! You are not an admin.");
+            console.log("UID not found in admins collection. Signing out...");
+            await auth.signOut();
+        }
+    } catch (error) {
+        console.error("Login failed:", error);
+        alert("Login Failed: " + error.message);
+    }
+});
+</script>
+
+</body>
+</html>
