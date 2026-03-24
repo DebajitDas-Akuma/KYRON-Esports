@@ -1,0 +1,41 @@
+rules_version = '2';
+
+// ============================================================
+// KYRON Esports — Firestore Security Rules
+// ============================================================
+// Deploy with: firebase deploy --only firestore:rules
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Seasons: public read, admin write ──────────────────
+    match /seasons/{seasonId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // ── Matches: public read, admin write ─────────────────
+    match /matches/{matchId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // ── Registrations: public read, admin write ────────────
+    match /registrations/{matchId}/entries/{entryId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // ── Match Leaderboards: public read, admin write ───────
+    match /matchLeaderboards/{matchId}/entries/{entryId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // ── Season Leaderboards: public read, admin write ──────
+    match /seasonLeaderboards/{seasonId}/entries/{entryId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+  }
+}

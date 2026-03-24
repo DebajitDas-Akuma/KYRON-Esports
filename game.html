@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>KYRON Esports — Game</title>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=Orbitron:wght@700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <style>
+    :root{--neon:#00f5ff;--neon2:#7b2fff;--bg:#050810;--card:#0d1117;}
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:'Rajdhani',sans-serif;background:var(--bg);color:#e0e0e0;min-height:100vh;}
+    a{text-decoration:none;color:inherit;}
+    body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,245,255,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(0,245,255,0.02) 1px,transparent 1px);background-size:60px 60px;pointer-events:none;z-index:0;}
+    nav{position:sticky;top:0;z-index:50;backdrop-filter:blur(20px);background:rgba(5,8,16,0.9);border-bottom:1px solid rgba(0,245,255,0.08);}
+    .nav-inner{max-width:1100px;margin:0 auto;padding:0 1.5rem;height:60px;display:flex;align-items:center;justify-content:space-between;}
+    .nav-logo{font-family:'Orbitron',sans-serif;font-weight:700;font-size:1.2rem;color:white;}
+    .nav-logo span{color:var(--neon);}
+    .nav-links{display:flex;align-items:center;gap:1.5rem;}
+    .nav-links a{font-size:0.8rem;font-weight:700;letter-spacing:0.1em;color:#6b7280;transition:color 0.2s;}
+    .nav-links a:hover{color:var(--neon);}
+
+    .inner{max-width:1100px;margin:0 auto;padding:0 1.5rem;position:relative;z-index:1;}
+
+    /* Hero banner */
+    .game-hero{padding:3rem 0 2rem;border-bottom:1px solid rgba(255,255,255,0.05);}
+    .back-link{display:inline-flex;align-items:center;gap:0.4rem;color:#6b7280;font-size:0.85rem;margin-bottom:1.5rem;transition:color 0.2s;}
+    .back-link:hover{color:var(--neon);}
+    .game-header{display:flex;align-items:center;gap:1.5rem;}
+    .game-emoji{font-size:5rem;}
+    .game-badge{display:inline-block;font-family:'Orbitron',sans-serif;font-size:0.65rem;font-weight:700;letter-spacing:0.2em;padding:0.3rem 0.9rem;border-radius:100px;border:1px solid;margin-bottom:0.75rem;}
+    .badge-ff{color:var(--neon);border-color:rgba(0,245,255,0.35);background:rgba(0,245,255,0.07);}
+    .badge-bgmi{color:var(--neon2);border-color:rgba(123,47,255,0.35);background:rgba(123,47,255,0.07);}
+    .game-title{font-family:'Orbitron',sans-serif;font-size:3rem;font-weight:900;color:white;}
+    .game-subtitle{color:#6b7280;margin-top:0.3rem;font-size:1rem;}
+
+    /* Seasons grid */
+    .seasons-section{padding:3rem 0;}
+    .section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:2rem;}
+    .section-head h2{font-family:'Orbitron',sans-serif;font-size:1.3rem;font-weight:700;color:white;}
+    .count-badge{font-family:'JetBrains Mono',monospace;font-size:0.8rem;color:#4b5563;}
+
+    .seasons-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1.25rem;}
+    .season-card{background:var(--card);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:1.5rem;transition:all 0.35s cubic-bezier(0.23,1,0.32,1);display:block;}
+    .season-card:hover{transform:translateY(-5px);}
+    .season-card.ff:hover{border-color:rgba(0,245,255,0.4);box-shadow:0 16px 50px rgba(0,245,255,0.1);}
+    .season-card.bgmi:hover{border-color:rgba(123,47,255,0.4);box-shadow:0 16px 50px rgba(123,47,255,0.12);}
+    .card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;}
+    .card-date{font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:#4b5563;}
+    .card-title{font-family:'Orbitron',sans-serif;font-size:1.1rem;font-weight:700;color:white;margin-bottom:0.5rem;}
+    .card-hint{font-size:0.85rem;color:#4b5563;}
+    .card-arrow{font-size:0.8rem;font-weight:700;margin-top:1rem;}
+    .ff .card-arrow{color:var(--neon);}
+    .bgmi .card-arrow{color:var(--neon2);}
+
+    .empty-state{grid-column:1/-1;text-align:center;padding:5rem 1rem;}
+    .empty-state div{font-size:3rem;margin-bottom:1rem;}
+    .empty-state p{font-family:'Orbitron',sans-serif;color:#4b5563;font-size:0.9rem;}
+
+    footer{border-top:1px solid rgba(255,255,255,0.05);padding:2rem;text-align:center;position:relative;z-index:1;}
+    footer span{font-family:'Orbitron',sans-serif;font-weight:700;color:white;}
+    footer span b{color:var(--neon);}
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="nav-inner">
+      <a href="index.html" class="nav-logo">KYR<span>ON</span></a>
+      <div class="nav-links">
+        <a href="game.html?g=freefire">FREE FIRE</a>
+        <a href="game.html?g=bgmi">BGMI</a>
+        <a href="login.html" style="padding:0.4rem 1rem;border:1px solid var(--neon);color:var(--neon);font-family:'Orbitron',sans-serif;font-size:0.7rem;font-weight:700;letter-spacing:0.1em;border-radius:6px;">ADMIN</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="inner">
+    <div class="game-hero">
+      <a href="index.html" class="back-link">← Back to Home</a>
+      <div class="game-header">
+        <div class="game-emoji" id="game-emoji">🔥</div>
+        <div>
+          <div class="game-badge badge-ff" id="game-badge">FREE FIRE</div>
+          <div class="game-title" id="game-title">FREE FIRE</div>
+          <div class="game-subtitle" id="game-subtitle">Free Fire Competitive Season Hub</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="seasons-section">
+      <div class="section-head">
+        <h2>ALL SEASONS</h2>
+        <span class="count-badge" id="season-count">Loading...</span>
+      </div>
+      <div class="seasons-grid" id="seasons-grid">
+        <div class="empty-state"><div>⏳</div><p>Loading seasons...</p></div>
+      </div>
+    </div>
+  </div>
+
+  <footer><span>KYR<b>ON</b> Esports</span></footer>
+
+  <script>
+    firebase.initializeApp({
+      apiKey:"AIzaSyCjAc7J1jP0WQGdUxBYaEVPiD578QhWOvA",
+      authDomain:"kyronesports.firebaseapp.com",
+      projectId:"kyronesports",
+      storageBucket:"kyronesports.firebasestorage.app",
+      messagingSenderId:"548905478063",
+      appId:"1:548905478063:web:382cd7412aca9fd532f15a"
+    });
+    const db = firebase.firestore();
+    const game = new URLSearchParams(window.location.search).get("g") || "freefire";
+    const isBGMI = game === "bgmi";
+
+    // Update branding
+    document.getElementById("game-emoji").textContent = isBGMI ? "🎯" : "🔥";
+    document.getElementById("game-title").textContent = isBGMI ? "BGMI" : "FREE FIRE";
+    document.getElementById("game-subtitle").textContent = isBGMI ? "Battlegrounds Mobile India Tournaments" : "Free Fire Competitive Season Hub";
+    document.getElementById("game-badge").textContent = isBGMI ? "BGMI" : "FREE FIRE";
+    document.getElementById("game-badge").className = "game-badge " + (isBGMI ? "badge-bgmi" : "badge-ff");
+    document.title = "KYRON Esports — " + (isBGMI ? "BGMI" : "Free Fire");
+
+    const grid = document.getElementById("seasons-grid");
+    const countEl = document.getElementById("season-count");
+
+    // FIXED: fetch ALL seasons, filter client-side — no .where() needed
+    db.collection("seasons").onSnapshot(snap => {
+      const docs = snap.docs
+        .filter(d => d.data().game === game)
+        .sort((a, b) => (b.data().createdAt?.seconds || 0) - (a.data().createdAt?.seconds || 0));
+
+      countEl.textContent = docs.length + " season" + (docs.length !== 1 ? "s" : "");
+
+      if (docs.length === 0) {
+        grid.innerHTML = `<div class="empty-state"><div>${isBGMI ? "🎯" : "🔥"}</div><p>No seasons available yet</p></div>`;
+        return;
+      }
+
+      grid.innerHTML = docs.map(d => {
+        const data = d.data();
+        const date = data.createdAt?.toDate
+          ? data.createdAt.toDate().toLocaleDateString("en-IN", {day:"2-digit",month:"short",year:"numeric"})
+          : "—";
+        const cls = isBGMI ? "bgmi" : "ff";
+        return `
+          <a href="season.html?id=${d.id}" class="season-card ${cls}">
+            <div class="card-top">
+              <div class="game-badge ${isBGMI ? "badge-bgmi" : "badge-ff"}" style="margin:0;">${isBGMI ? "BGMI" : "FREE FIRE"}</div>
+              <span class="card-date">${date}</span>
+            </div>
+            <div class="card-title">${data.seasonName}</div>
+            <div class="card-hint">View matches &amp; leaderboard</div>
+            <div class="card-arrow">Open Season →</div>
+          </a>`;
+      }).join("");
+    }, err => {
+      grid.innerHTML = `<div class="empty-state"><div>⚠️</div><p style="color:#f87171;">${err.message}</p></div>`;
+    });
+  </script>
+</body>
+</html>

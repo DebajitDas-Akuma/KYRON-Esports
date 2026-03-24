@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>KYRON Esports — Match</title>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=Orbitron:wght@700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <style>
+    :root{--neon:#00f5ff;--neon2:#7b2fff;--bg:#050810;--card:#0d1117;}
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:'Rajdhani',sans-serif;background:var(--bg);color:#e0e0e0;min-height:100vh;}
+    a{text-decoration:none;color:inherit;}
+    body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,245,255,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(0,245,255,0.02) 1px,transparent 1px);background-size:60px 60px;pointer-events:none;z-index:0;}
+
+    nav{position:sticky;top:0;z-index:50;backdrop-filter:blur(20px);background:rgba(5,8,16,0.9);border-bottom:1px solid rgba(0,245,255,0.08);}
+    .nav-inner{max-width:1100px;margin:0 auto;padding:0 1.5rem;height:60px;display:flex;align-items:center;justify-content:space-between;}
+    .nav-logo{font-family:'Orbitron',sans-serif;font-weight:700;font-size:1.2rem;color:white;}
+    .nav-logo span{color:var(--neon);}
+    .nav-links{display:flex;gap:1.5rem;align-items:center;}
+    .nav-links a{font-size:0.8rem;font-weight:700;letter-spacing:0.1em;color:#6b7280;transition:color 0.2s;}
+    .nav-links a:hover{color:var(--neon);}
+
+    .inner{max-width:1100px;margin:0 auto;padding:0 1.5rem;position:relative;z-index:1;}
+    .back-link{display:inline-flex;align-items:center;gap:0.4rem;color:#6b7280;font-size:0.85rem;margin-bottom:1.5rem;transition:color 0.2s;}
+    .back-link:hover{color:var(--neon);}
+
+    /* Match header */
+    .match-header{padding:2.5rem 0 2rem;border-bottom:1px solid rgba(255,255,255,0.05);}
+    .type-pill{display:inline-block;font-family:'Orbitron',sans-serif;font-size:0.65rem;font-weight:700;letter-spacing:0.2em;padding:0.3rem 1rem;border-radius:100px;border:1px solid;margin-bottom:1rem;}
+    .type-solo{color:#22d3ee;border-color:rgba(34,211,238,0.4);background:rgba(34,211,238,0.08);}
+    .type-duo{color:#a78bfa;border-color:rgba(167,139,250,0.4);background:rgba(167,139,250,0.08);}
+    .type-squad{color:#f472b6;border-color:rgba(244,114,182,0.4);background:rgba(244,114,182,0.08);}
+    .match-title{font-family:'Orbitron',sans-serif;font-size:2.5rem;font-weight:900;color:white;margin-bottom:0.75rem;line-height:1.1;}
+    .match-dt{color:#6b7280;font-size:1rem;margin-bottom:1.5rem;}
+    .reg-btn{display:inline-flex;align-items:center;gap:0.5rem;padding:0.85rem 2.5rem;background:linear-gradient(135deg,var(--neon),#0099aa);color:#050810;font-family:'Orbitron',sans-serif;font-weight:700;font-size:0.85rem;letter-spacing:0.1em;border-radius:8px;transition:all 0.3s;box-shadow:0 0 20px rgba(0,245,255,0.2);}
+    .reg-btn:hover{transform:translateY(-3px);box-shadow:0 10px 40px rgba(0,245,255,0.4);}
+
+    /* Layout */
+    .content{display:grid;grid-template-columns:280px 1fr;gap:2rem;padding:2.5rem 0;}
+    @media(max-width:768px){.content{grid-template-columns:1fr;}}
+
+    /* Info panel */
+    .info-card{background:var(--card);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:1.5rem;}
+    .info-label{font-family:'Orbitron',sans-serif;font-size:0.6rem;letter-spacing:0.18em;color:#4b5563;margin-bottom:0.3rem;}
+    .info-val{font-size:1rem;font-weight:600;color:white;margin-bottom:1.25rem;}
+    .info-val:last-child{margin-bottom:0;}
+
+    /* Leaderboard */
+    .lb-card{background:var(--card);border:1px solid rgba(255,255,255,0.07);border-radius:12px;overflow:hidden;}
+    .lb-card-header{padding:1rem 1.5rem;border-bottom:1px solid rgba(255,255,255,0.07);display:flex;align-items:center;justify-content:space-between;}
+    .lb-card-header h3{font-family:'Orbitron',sans-serif;font-size:0.8rem;font-weight:700;letter-spacing:0.15em;color:white;}
+    .lb-count{font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:#4b5563;}
+    table{width:100%;border-collapse:collapse;font-size:0.9rem;}
+    thead th{font-family:'Orbitron',sans-serif;font-size:0.62rem;letter-spacing:0.12em;color:#4b5563;padding:0.75rem 1rem;border-bottom:1px solid rgba(255,255,255,0.07);text-align:left;}
+    tbody td{padding:0.9rem 1rem;border-bottom:1px solid rgba(255,255,255,0.04);}
+    tbody tr:last-child td{border-bottom:none;}
+    tbody tr:hover{background:rgba(255,255,255,0.02);}
+    tbody tr.gold td:first-child{color:#fbbf24;}
+    tbody tr.silver td:first-child{color:#94a3b8;}
+    tbody tr.bronze td:first-child{color:#cd7c45;}
+    .pts{font-family:'Orbitron',sans-serif;font-weight:900;color:var(--neon);font-size:1.1rem;text-align:right;}
+    .uid{font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:#4b5563;}
+
+    .empty-lb{padding:4rem;text-align:center;}
+    .empty-lb div{font-size:3rem;margin-bottom:0.75rem;}
+    .empty-lb p{font-family:'Orbitron',sans-serif;color:#4b5563;font-size:0.85rem;}
+
+    footer{border-top:1px solid rgba(255,255,255,0.05);padding:2rem;text-align:center;position:relative;z-index:1;}
+    footer span{font-family:'Orbitron',sans-serif;font-weight:700;color:white;}
+    footer b{color:var(--neon);}
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="nav-inner">
+      <a href="index.html" class="nav-logo">KYR<span>ON</span></a>
+      <div class="nav-links">
+        <a href="game.html?g=freefire">FREE FIRE</a>
+        <a href="game.html?g=bgmi">BGMI</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="inner">
+    <div class="match-header">
+      <a href="#" class="back-link" id="back-link">← Back to Season</a>
+      <div id="type-pill-wrap"></div>
+      <div class="match-title" id="match-title">Loading...</div>
+      <div class="match-dt" id="match-dt"></div>
+      <div id="reg-btn-wrap"></div>
+    </div>
+
+    <div class="content">
+      <!-- Info sidebar -->
+      <div>
+        <div class="info-card" id="info-card">
+          <div class="info-label">MATCH TYPE</div>
+          <div class="info-val" id="info-type">—</div>
+          <div class="info-label">DATE & TIME</div>
+          <div class="info-val" id="info-dt">—</div>
+          <div class="info-label">GAME</div>
+          <div class="info-val" id="info-game">—</div>
+        </div>
+      </div>
+
+      <!-- Leaderboard -->
+      <div>
+        <div class="lb-card">
+          <div class="lb-card-header">
+            <h3>MATCH LEADERBOARD</h3>
+            <span class="lb-count" id="lb-count"></span>
+          </div>
+          <div id="lb-body">
+            <div class="empty-lb"><div>⏳</div><p>Loading...</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer><span>KYR<b>ON</b> Esports</span></footer>
+
+  <script>
+    firebase.initializeApp({
+      apiKey:"AIzaSyCjAc7J1jP0WQGdUxBYaEVPiD578QhWOvA",
+      authDomain:"kyronesports.firebaseapp.com",
+      projectId:"kyronesports",
+      storageBucket:"kyronesports.firebasestorage.app",
+      messagingSenderId:"548905478063",
+      appId:"1:548905478063:web:382cd7412aca9fd532f15a"
+    });
+    const db = firebase.firestore();
+    const matchId = new URLSearchParams(window.location.search).get("id");
+    if (!matchId) { window.location.href = "index.html"; }
+
+    const typeClass = {solo:"type-solo",duo:"type-duo",squad:"type-squad"};
+
+    // ── Load match details ────────────────────────────────
+    db.collection("matches").doc(matchId).onSnapshot(snap => {
+      if (!snap.exists) return;
+      const d = snap.data();
+      const dt = d.matchDateTime?.toDate
+        ? d.matchDateTime.toDate().toLocaleString("en-IN",{weekday:"short",day:"2-digit",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit"})
+        : "TBD";
+
+      document.title = "KYRON — " + d.matchName;
+      document.getElementById("back-link").href = "season.html?id=" + d.seasonId;
+      document.getElementById("match-title").textContent = d.matchName;
+      document.getElementById("match-dt").textContent = "📅 " + dt;
+
+      document.getElementById("type-pill-wrap").innerHTML =
+        `<span class="type-pill ${typeClass[d.matchType]||''}">${d.matchType.toUpperCase()}</span>`;
+
+      if (d.registrationLink) {
+        document.getElementById("reg-btn-wrap").innerHTML =
+          `<a href="${d.registrationLink}" target="_blank" rel="noopener" class="reg-btn">REGISTER NOW ↗</a>`;
+      }
+
+      document.getElementById("info-type").textContent = d.matchType.charAt(0).toUpperCase() + d.matchType.slice(1);
+      document.getElementById("info-dt").textContent = dt;
+      document.getElementById("info-game").textContent = d.game === "bgmi" ? "BGMI" : "Free Fire";
+
+      // Load leaderboard after we know the match type
+      loadLeaderboard(d.matchType);
+    });
+
+    // ── Load match leaderboard — FIXED: no orderBy, sort client-side ──
+    function loadLeaderboard(type) {
+      db.collection("matchLeaderboards").doc(matchId).collection("entries")
+        .onSnapshot(snap => {
+          const lbCount = document.getElementById("lb-count");
+          const lbBody = document.getElementById("lb-body");
+          lbCount.textContent = snap.size + " entr" + (snap.size !== 1 ? "ies" : "y");
+
+          if (snap.empty) {
+            lbBody.innerHTML = `<div class="empty-lb"><div>🏆</div><p>Leaderboard not published yet</p><p style="font-size:0.75rem;margin-top:0.4rem;color:#374151;">Results will appear after the match</p></div>`;
+            return;
+          }
+
+          const sorted = snap.docs
+            .map(d => d.data())
+            .sort((a, b) => (b.points || 0) - (a.points || 0));
+
+          const medals = ["🥇","🥈","🥉"];
+          const rowClass = ["gold","silver","bronze"];
+          const isSolo = type === "solo";
+
+          lbBody.innerHTML = `<table>
+            <thead><tr>
+              <th style="width:50px">#</th>
+              <th>${isSolo ? "PLAYER" : "TEAM"}</th>
+              ${isSolo ? "<th>UID</th>" : ""}
+              <th style="text-align:right">POINTS</th>
+            </tr></thead>
+            <tbody>${sorted.map((e,i) => `
+              <tr class="${rowClass[i]||''}">
+                <td style="font-family:'JetBrains Mono',monospace;font-weight:700;">${i<3?medals[i]:i+1}</td>
+                <td style="color:white;font-weight:600;">${isSolo ? (e.playerName||"—") : (e.teamName||"—")}</td>
+                ${isSolo ? `<td class="uid">${e.playerUID||"—"}</td>` : ""}
+                <td class="pts">${e.points||0}</td>
+              </tr>`).join("")}
+            </tbody></table>`;
+        }, err => {
+          document.getElementById("lb-body").innerHTML = `<div class="empty-lb"><p style="color:#f87171;">Error: ${err.message}</p></div>`;
+        });
+    }
+  </script>
+</body>
+</html>

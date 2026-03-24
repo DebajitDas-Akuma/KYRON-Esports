@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>KYRON Esports — Season</title>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=Orbitron:wght@700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <style>
+    :root{--neon:#00f5ff;--neon2:#7b2fff;--bg:#050810;--card:#0d1117;}
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:'Rajdhani',sans-serif;background:var(--bg);color:#e0e0e0;min-height:100vh;}
+    a{text-decoration:none;color:inherit;}
+    body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,245,255,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(0,245,255,0.02) 1px,transparent 1px);background-size:60px 60px;pointer-events:none;z-index:0;}
+
+    nav{position:sticky;top:0;z-index:50;backdrop-filter:blur(20px);background:rgba(5,8,16,0.9);border-bottom:1px solid rgba(0,245,255,0.08);}
+    .nav-inner{max-width:1100px;margin:0 auto;padding:0 1.5rem;height:60px;display:flex;align-items:center;justify-content:space-between;}
+    .nav-logo{font-family:'Orbitron',sans-serif;font-weight:700;font-size:1.2rem;color:white;}
+    .nav-logo span{color:var(--neon);}
+    .nav-links{display:flex;gap:1.5rem;align-items:center;}
+    .nav-links a{font-size:0.8rem;font-weight:700;letter-spacing:0.1em;color:#6b7280;transition:color 0.2s;}
+    .nav-links a:hover{color:var(--neon);}
+
+    .inner{max-width:1100px;margin:0 auto;padding:0 1.5rem;position:relative;z-index:1;}
+    .back-link{display:inline-flex;align-items:center;gap:0.4rem;color:#6b7280;font-size:0.85rem;margin-bottom:1.5rem;transition:color 0.2s;}
+    .back-link:hover{color:var(--neon);}
+
+    /* Season header */
+    .season-header{padding:2.5rem 0 2rem;border-bottom:1px solid rgba(255,255,255,0.05);}
+    .season-badge{display:inline-block;font-family:'Orbitron',sans-serif;font-size:0.65rem;font-weight:700;letter-spacing:0.2em;padding:0.3rem 0.9rem;border-radius:100px;border:1px solid rgba(0,245,255,0.35);color:var(--neon);background:rgba(0,245,255,0.07);margin-bottom:0.75rem;}
+    .season-name{font-family:'Orbitron',sans-serif;font-size:2.5rem;font-weight:900;color:white;}
+
+    /* Tabs */
+    .tabs{display:flex;border-bottom:1px solid rgba(255,255,255,0.07);position:sticky;top:60px;z-index:40;background:var(--bg);}
+    .tab{padding:1rem 2rem;font-family:'Orbitron',sans-serif;font-size:0.75rem;font-weight:700;letter-spacing:0.1em;color:#6b7280;cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;background:none;border-top:none;border-left:none;border-right:none;}
+    .tab.active{color:var(--neon);border-bottom-color:var(--neon);}
+    .tab-pane{display:none;padding:2.5rem 0;}
+    .tab-pane.active{display:block;}
+
+    /* Match cards */
+    .matches-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1.25rem;}
+    .match-card{background:var(--card);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:1.5rem;transition:all 0.3s;display:block;}
+    .match-card:hover{border-color:rgba(0,245,255,0.35);transform:translateY(-4px);box-shadow:0 15px 40px rgba(0,245,255,0.08);}
+    .match-type{font-family:'Orbitron',sans-serif;font-size:0.65rem;font-weight:700;letter-spacing:0.15em;padding:0.25rem 0.75rem;border-radius:100px;border:1px solid;display:inline-block;margin-bottom:0.75rem;}
+    .type-solo{color:#22d3ee;border-color:rgba(34,211,238,0.35);background:rgba(34,211,238,0.08);}
+    .type-duo{color:#a78bfa;border-color:rgba(167,139,250,0.35);background:rgba(167,139,250,0.08);}
+    .type-squad{color:#f472b6;border-color:rgba(244,114,182,0.35);background:rgba(244,114,182,0.08);}
+    .match-name{font-family:'Orbitron',sans-serif;font-size:1rem;font-weight:700;color:white;margin-bottom:0.4rem;}
+    .match-dt{font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:#4b5563;margin-bottom:0.75rem;}
+    .match-arrow{font-size:0.8rem;font-weight:700;color:var(--neon);}
+
+    /* Leaderboard */
+    .lb-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem;}
+    .lb-header h3{font-family:'Orbitron',sans-serif;font-size:1.1rem;font-weight:700;color:white;}
+    .search-box{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);color:white;border-radius:8px;padding:0.55rem 1rem;font-family:'JetBrains Mono',monospace;font-size:0.85rem;outline:none;transition:border-color 0.3s;width:280px;max-width:100%;}
+    .search-box:focus{border-color:var(--neon);}
+    .search-box::placeholder{color:#374151;}
+
+    .lb-card{background:var(--card);border:1px solid rgba(255,255,255,0.07);border-radius:12px;overflow:hidden;}
+    table{width:100%;border-collapse:collapse;font-size:0.9rem;}
+    thead th{font-family:'Orbitron',sans-serif;font-size:0.65rem;letter-spacing:0.12em;color:#4b5563;padding:0.75rem 1rem;border-bottom:1px solid rgba(255,255,255,0.07);text-align:left;}
+    thead th:last-child,thead th:nth-last-child(2){text-align:right;}
+    tbody td{padding:0.9rem 1rem;border-bottom:1px solid rgba(255,255,255,0.04);}
+    tbody tr:last-child td{border-bottom:none;}
+    tbody tr:hover{background:rgba(255,255,255,0.02);}
+    tbody tr.gold td:first-child{color:#fbbf24;}
+    tbody tr.silver td:first-child{color:#94a3b8;}
+    tbody tr.bronze td:first-child{color:#cd7c45;}
+    .pts{font-family:'Orbitron',sans-serif;font-weight:700;color:var(--neon);text-align:right;}
+    .uid{font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:#4b5563;}
+    .tr{text-align:right;color:#6b7280;}
+
+    .empty{padding:4rem;text-align:center;color:#4b5563;font-family:'Orbitron',sans-serif;font-size:0.9rem;}
+
+    footer{border-top:1px solid rgba(255,255,255,0.05);padding:2rem;text-align:center;position:relative;z-index:1;}
+    footer span{font-family:'Orbitron',sans-serif;font-weight:700;color:white;}
+    footer b{color:var(--neon);}
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="nav-inner">
+      <a href="index.html" class="nav-logo">KYR<span>ON</span></a>
+      <div class="nav-links">
+        <a href="game.html?g=freefire">FREE FIRE</a>
+        <a href="game.html?g=bgmi">BGMI</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="inner">
+    <div class="season-header">
+      <a href="#" class="back-link" id="back-link">← Back to Game</a>
+      <div class="season-badge" id="season-badge">LOADING</div>
+      <div class="season-name" id="season-name">Loading...</div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <div class="inner" style="display:flex;padding-top:0;padding-bottom:0;">
+      <button class="tab active" data-tab="matches">MATCHES</button>
+      <button class="tab" data-tab="leaderboard">LEADERBOARD</button>
+    </div>
+  </div>
+
+  <div class="inner">
+    <!-- Matches -->
+    <div class="tab-pane active" id="tab-matches">
+      <div class="matches-grid" id="matches-grid">
+        <div class="empty">Loading matches...</div>
+      </div>
+    </div>
+
+    <!-- Leaderboard -->
+    <div class="tab-pane" id="tab-leaderboard">
+      <div class="lb-header">
+        <h3>SEASONAL LEADERBOARD</h3>
+        <input type="text" class="search-box" id="lb-search" placeholder="Search player or UID..."/>
+      </div>
+      <div class="lb-card">
+        <div id="lb-body"><div class="empty">Loading leaderboard...</div></div>
+      </div>
+    </div>
+  </div>
+
+  <footer><span>KYR<b>ON</b> Esports</span></footer>
+
+  <script>
+    firebase.initializeApp({
+      apiKey:"AIzaSyCjAc7J1jP0WQGdUxBYaEVPiD578QhWOvA",
+      authDomain:"kyronesports.firebaseapp.com",
+      projectId:"kyronesports",
+      storageBucket:"kyronesports.firebasestorage.app",
+      messagingSenderId:"548905478063",
+      appId:"1:548905478063:web:382cd7412aca9fd532f15a"
+    });
+    const db = firebase.firestore();
+    const seasonId = new URLSearchParams(window.location.search).get("id");
+    if (!seasonId) { window.location.href = "index.html"; }
+
+    // ── Load season info ──────────────────────────────────
+    db.collection("seasons").doc(seasonId).onSnapshot(snap => {
+      if (!snap.exists) return;
+      const d = snap.data();
+      const isBGMI = d.game === "bgmi";
+      document.getElementById("season-name").textContent = d.seasonName;
+      document.title = "KYRON — " + d.seasonName;
+      const badge = document.getElementById("season-badge");
+      badge.textContent = isBGMI ? "BGMI" : "FREE FIRE";
+      if (isBGMI) badge.style.cssText = "color:var(--neon2);border-color:rgba(123,47,255,0.35);background:rgba(123,47,255,0.07);display:inline-block;font-family:'Orbitron',sans-serif;font-size:0.65rem;font-weight:700;letter-spacing:0.2em;padding:0.3rem 0.9rem;border-radius:100px;border:1px solid;margin-bottom:0.75rem;";
+      document.getElementById("back-link").href = "game.html?g=" + d.game;
+    });
+
+    // ── Load matches — FIXED: fetch all, filter client-side ──
+    const matchTypeClass = {solo:"type-solo",duo:"type-duo",squad:"type-squad"};
+    db.collection("matches").onSnapshot(snap => {
+      const docs = snap.docs
+        .filter(d => d.data().seasonId === seasonId)
+        .sort((a, b) => (a.data().matchDateTime?.seconds || 0) - (b.data().matchDateTime?.seconds || 0));
+
+      const grid = document.getElementById("matches-grid");
+      if (docs.length === 0) {
+        grid.innerHTML = '<div class="empty">No matches scheduled yet</div>';
+        return;
+      }
+      grid.innerHTML = docs.map(d => {
+        const data = d.data();
+        const dt = data.matchDateTime?.toDate
+          ? data.matchDateTime.toDate().toLocaleString("en-IN",{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"})
+          : "TBD";
+        const tc = matchTypeClass[data.matchType] || "type-solo";
+        return `
+          <a href="match.html?id=${d.id}" class="match-card">
+            <span class="match-type ${tc}">${data.matchType.toUpperCase()}</span>
+            <div class="match-name">${data.matchName}</div>
+            <div class="match-dt">📅 ${dt}</div>
+            <div class="match-arrow">View Match →</div>
+          </a>`;
+      }).join("");
+    }, err => {
+      document.getElementById("matches-grid").innerHTML = `<div class="empty" style="color:#f87171;">Error: ${err.message}</div>`;
+    });
+
+    // ── Load seasonal leaderboard — FIXED: fetch all, sort client-side ──
+    let allLbEntries = [];
+    db.collection("seasonLeaderboards").doc(seasonId).collection("entries")
+      .onSnapshot(snap => {
+        allLbEntries = snap.docs
+          .map(d => d.data())
+          .sort((a, b) => (b.totalPoints || 0) - (a.totalPoints || 0));
+        renderLb(allLbEntries);
+      }, err => {
+        document.getElementById("lb-body").innerHTML = `<div class="empty" style="color:#f87171;">Error: ${err.message}</div>`;
+      });
+
+    document.getElementById("lb-search").addEventListener("input", function() {
+      const q = this.value.toLowerCase();
+      renderLb(allLbEntries.filter(e =>
+        (e.playerName||"").toLowerCase().includes(q) || (e.playerUID||"").toLowerCase().includes(q)
+      ));
+    });
+
+    function renderLb(entries) {
+      const el = document.getElementById("lb-body");
+      if (!entries.length) {
+        el.innerHTML = '<div class="empty">No leaderboard data yet</div>';
+        return;
+      }
+      const medals = ["🥇","🥈","🥉"];
+      const rowClass = ["gold","silver","bronze"];
+      el.innerHTML = `<table>
+        <thead><tr>
+          <th style="width:50px">#</th>
+          <th>PLAYER</th>
+          <th>UID</th>
+          <th style="text-align:right">POINTS</th>
+          <th style="text-align:right">MATCHES</th>
+        </tr></thead>
+        <tbody>${entries.map((e,i) => `
+          <tr class="${rowClass[i]||''}">
+            <td style="font-family:'JetBrains Mono',monospace;font-weight:700;">${i<3?medals[i]:i+1}</td>
+            <td style="color:white;font-weight:600;">${e.playerName||"—"}</td>
+            <td class="uid">${e.playerUID||"—"}</td>
+            <td class="pts">${e.totalPoints||0}</td>
+            <td class="tr">${e.matchesPlayed||0}</td>
+          </tr>`).join("")}
+        </tbody></table>`;
+    }
+
+    // ── Tabs ──────────────────────────────────────────────
+    document.querySelectorAll(".tab").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".tab").forEach(b => b.classList.remove("active"));
+        document.querySelectorAll(".tab-pane").forEach(p => p.classList.remove("active"));
+        btn.classList.add("active");
+        document.getElementById("tab-" + btn.dataset.tab).classList.add("active");
+      });
+    });
+  </script>
+</body>
+</html>
