@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KYRON Esports — Admin Login</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=Orbitron:wght@700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <style>
+    :root { --neon: #00f5ff; --bg: #050810; --card: #0d1117; }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family: 'Rajdhani', sans-serif;
+      background: var(--bg);
+      color: #e0e0e0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: linear-gradient(rgba(0,245,255,0.025) 1px,transparent 1px), linear-gradient(90deg,rgba(0,245,255,0.025) 1px,transparent 1px);
+      background-size: 60px 60px;
+      pointer-events: none;
+    }
+    .orb { position:fixed; border-radius:50%; pointer-events:none; animation:pulse 7s ease-in-out infinite; }
+    .orb1 { width:500px;height:500px;top:-200px;left:-200px;background:radial-gradient(circle,rgba(0,245,255,0.06) 0%,transparent 70%); }
+    .orb2 { width:400px;height:400px;bottom:-150px;right:-150px;background:radial-gradient(circle,rgba(123,47,255,0.08) 0%,transparent 70%);animation-delay:3s; }
+    @keyframes pulse { 0%,100%{transform:scale(1);}50%{transform:scale(1.2);} }
+
+    .card {
+      position:relative; background:var(--card); border:1px solid rgba(0,245,255,0.12);
+      border-radius:20px; padding:3rem; width:100%; max-width:420px;
+      box-shadow:0 0 60px rgba(0,245,255,0.06),0 40px 80px rgba(0,0,0,0.6);
+      animation:slideUp 0.6s cubic-bezier(0.23,1,0.32,1) forwards;
+    }
+    @keyframes slideUp { from{opacity:0;transform:translateY(30px);}to{opacity:1;transform:translateY(0);} }
+
+    .logo { font-family:'Orbitron',sans-serif;font-size:2rem;font-weight:900;color:white;text-align:center;letter-spacing:0.05em; }
+    .logo span { color:var(--neon); }
+    .shield { font-size:3rem;text-align:center;margin-bottom:0.5rem;filter:drop-shadow(0 0 20px rgba(0,245,255,0.4)); }
+    .subtitle { text-align:center;color:#6b7280;font-size:0.85rem;margin-bottom:2rem;font-family:'JetBrains Mono',monospace; }
+
+    label { font-size:0.65rem;font-family:'Orbitron',sans-serif;letter-spacing:0.15em;color:#6b7280;display:block;margin-bottom:0.4rem; }
+    .field { margin-bottom:1.25rem; }
+    input[type=email], input[type=password] {
+      width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);
+      color:white;border-radius:10px;padding:0.85rem 1.1rem;
+      font-family:'JetBrains Mono',monospace;font-size:0.9rem;
+      outline:none;transition:border-color 0.3s,box-shadow 0.3s;
+    }
+    input:focus { border-color:var(--neon);box-shadow:0 0 0 3px rgba(0,245,255,0.08); }
+    input::placeholder { color:#374151; }
+
+    .submit-btn {
+      width:100%;padding:0.9rem;
+      background:linear-gradient(135deg,var(--neon),#0099aa);
+      color:#050810;font-family:'Orbitron',sans-serif;font-weight:700;
+      font-size:0.85rem;letter-spacing:0.15em;
+      border:none;border-radius:10px;cursor:pointer;transition:all 0.3s;
+    }
+    .submit-btn:hover { transform:translateY(-2px);box-shadow:0 10px 30px rgba(0,245,255,0.35); }
+    .submit-btn:disabled { opacity:0.5;cursor:not-allowed;transform:none; }
+
+    .error-box {
+      background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);
+      color:#f87171;border-radius:8px;padding:0.75rem 1rem;
+      font-size:0.85rem;margin-bottom:1rem;display:none;
+    }
+    .back { display:block;text-align:center;color:#4b5563;font-size:0.8rem;text-decoration:none;margin-top:1.5rem;transition:color 0.3s; }
+    .back:hover { color:var(--neon); }
+  </style>
+</head>
+<body>
+  <div class="orb orb1"></div>
+  <div class="orb orb2"></div>
+
+  <div class="card">
+    <div class="shield">🛡️</div>
+    <div class="logo">KYR<span>ON</span></div>
+    <p class="subtitle">ADMIN ACCESS</p>
+
+    <div class="error-box" id="error-box"></div>
+
+    <div class="field">
+      <label>EMAIL ADDRESS</label>
+      <input type="email" id="email" placeholder="admin@kyron.gg" autocomplete="email" />
+    </div>
+    <div class="field">
+      <label>PASSWORD</label>
+      <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" />
+    </div>
+    <button class="submit-btn" id="submit-btn" onclick="doLogin()">ACCESS ADMIN PANEL</button>
+    <a href="index.html" class="back">← Back to KYRON Esports</a>
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCjAc7J1jP0WQGdUxBYaEVPiD578QhWOvA",
+      authDomain: "kyronesports.firebaseapp.com",
+      projectId: "kyronesports",
+      storageBucket: "kyronesports.firebasestorage.app",
+      messagingSenderId: "548905478063",
+      appId: "1:548905478063:web:382cd7412aca9fd532f15a"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+
+    // Redirect if already logged in
+    auth.onAuthStateChanged(user => {
+      if (user) window.location.href = "admin.html";
+    });
+
+    // Allow Enter key to submit
+    document.getElementById("password").addEventListener("keydown", e => {
+      if (e.key === "Enter") doLogin();
+    });
+
+    function doLogin() {
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+      const btn = document.getElementById("submit-btn");
+      const errBox = document.getElementById("error-box");
+
+      if (!email || !password) {
+        errBox.textContent = "Please enter email and password.";
+        errBox.style.display = "block";
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = "AUTHENTICATING...";
+      errBox.style.display = "none";
+
+      auth.signInWithEmailAndPassword(email, password)
+        .then(() => { window.location.href = "admin.html"; })
+        .catch(err => {
+          const msgs = {
+            "auth/wrong-password": "Incorrect password.",
+            "auth/user-not-found": "No account with this email.",
+            "auth/invalid-email": "Invalid email address.",
+            "auth/invalid-credential": "Invalid email or password.",
+            "auth/too-many-requests": "Too many attempts. Try again later."
+          };
+          errBox.textContent = msgs[err.code] || "Login failed: " + err.message;
+          errBox.style.display = "block";
+          btn.disabled = false;
+          btn.textContent = "ACCESS ADMIN PANEL";
+        });
+    }
+  </script>
+</body>
+</html>

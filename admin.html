@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KYRON Admin Panel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=Orbitron:wght@700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Firebase SDKs loaded via CDN scripts (NOT ES modules) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+  <style>
+    :root { --neon:#00f5ff; --neon2:#7b2fff; --bg:#050810; --panel:#0a0e1a; --card:#0d1117; --border:rgba(255,255,255,0.07); }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Rajdhani',sans-serif; background:var(--bg); color:#e0e0e0; min-height:100vh; display:flex; flex-direction:column; }
+    .font-orbitron { font-family:'Orbitron',sans-serif; }
+    .font-mono-j { font-family:'JetBrains Mono',monospace; }
+    .text-neon { color:var(--neon); }
+
+    .topbar { background:var(--panel); border-bottom:1px solid var(--border); padding:0 1.5rem; height:60px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; }
+    .logo { font-family:'Orbitron',sans-serif; font-weight:700; font-size:1.1rem; color:white; }
+    .logo span { color:var(--neon); }
+
+    .layout { display:flex; flex:1; }
+    .sidebar { width:220px; background:var(--panel); border-right:1px solid var(--border); padding:1.5rem 1rem; display:flex; flex-direction:column; gap:0.5rem; position:sticky; top:60px; height:calc(100vh - 60px); overflow-y:auto; }
+    .main-content { flex:1; padding:2rem; overflow-y:auto; }
+
+    .nav-btn { display:flex; align-items:center; gap:0.75rem; padding:0.7rem 1rem; border-radius:8px; border:none; background:transparent; color:#6b7280; font-family:'Rajdhani',sans-serif; font-size:0.9rem; font-weight:600; cursor:pointer; transition:all 0.2s; width:100%; text-align:left; }
+    .nav-btn:hover { background:rgba(255,255,255,0.05); color:#e0e0e0; }
+    .nav-btn.active { background:rgba(0,245,255,0.1); color:var(--neon); }
+    .nav-section { font-size:0.6rem; font-family:'Orbitron',sans-serif; letter-spacing:0.2em; color:#374151; padding:0.5rem 1rem; margin-top:0.5rem; }
+
+    .game-btn { padding:0.6rem 1rem; border-radius:8px; font-family:'Orbitron',sans-serif; font-size:0.7rem; font-weight:700; letter-spacing:0.1em; cursor:pointer; border:1px solid var(--border); background:transparent; color:#6b7280; transition:all 0.25s; flex:1; }
+    .game-btn[data-game="freefire"].active { border-color:var(--neon); color:var(--neon); background:rgba(0,245,255,0.1); }
+    .game-btn[data-game="bgmi"].active { border-color:var(--neon2); color:var(--neon2); background:rgba(123,47,255,0.1); }
+
+    .admin-panel { display:none; }
+    .admin-panel.active { display:block; }
+
+    .section-card { background:var(--card); border:1px solid var(--border); border-radius:12px; margin-bottom:1.5rem; overflow:hidden; }
+    .section-header { padding:1rem 1.5rem; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:0.75rem; }
+    .section-title { font-family:'Orbitron',sans-serif; font-size:0.75rem; font-weight:700; letter-spacing:0.15em; color:white; }
+    .section-body { padding:1.5rem; }
+
+    .input-field { width:100%; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); color:white; border-radius:8px; padding:0.7rem 0.9rem; font-family:'JetBrains Mono',monospace; font-size:0.85rem; outline:none; transition:border-color 0.3s; }
+    .input-field:focus { border-color:var(--neon); }
+    .input-field::placeholder { color:#374151; }
+    select.input-field option { background:var(--card); color:white; }
+
+    .field-label { font-size:0.65rem; font-family:'Orbitron',sans-serif; letter-spacing:0.15em; color:#6b7280; display:block; margin-bottom:0.4rem; }
+    .form-group { margin-bottom:1.1rem; }
+
+    .btn { padding:0.65rem 1.5rem; border-radius:8px; border:none; cursor:pointer; font-family:'Rajdhani',sans-serif; font-weight:700; font-size:0.9rem; transition:all 0.25s; }
+    .btn-primary { background:linear-gradient(135deg,var(--neon),#0099aa); color:#050810; }
+    .btn-primary:hover { transform:translateY(-1px); box-shadow:0 8px 20px rgba(0,245,255,0.3); }
+    .btn-secondary { background:rgba(255,255,255,0.07); color:#e0e0e0; }
+    .btn-secondary:hover { background:rgba(255,255,255,0.12); }
+    .btn-danger { background:rgba(239,68,68,0.15); color:#f87171; border:1px solid rgba(239,68,68,0.2); }
+    .btn-danger:hover { background:rgba(239,68,68,0.25); }
+    .btn-sm { padding:0.35rem 0.8rem; font-size:0.8rem; border-radius:6px; }
+
+    .list-item { display:flex; align-items:center; justify-content:space-between; padding:0.9rem 1rem; border-bottom:1px solid var(--border); transition:background 0.2s; }
+    .list-item:last-child { border-bottom:none; }
+    .list-item:hover { background:rgba(255,255,255,0.02); }
+    .empty-msg { color:#4b5563; font-size:0.9rem; padding:1.5rem; text-align:center; display:block; }
+
+    .badge-sm { font-size:0.6rem; font-family:'Orbitron',sans-serif; font-weight:700; letter-spacing:0.1em; padding:0.15rem 0.5rem; border-radius:100px; background:rgba(0,245,255,0.1); color:var(--neon); border:1px solid rgba(0,245,255,0.2); }
+
+    .player-row { margin-bottom:0.5rem; }
+    .breadcrumb { display:flex; align-items:center; gap:0.5rem; font-size:0.8rem; color:#4b5563; margin-bottom:1.5rem; flex-wrap:wrap; }
+    .breadcrumb .current { color:var(--neon); }
+
+    #toast { position:fixed; bottom:2rem; right:2rem; z-index:9999; background:var(--card); border:1px solid rgba(0,245,255,0.3); color:white; padding:0.85rem 1.5rem; border-radius:10px; font-weight:600; font-size:0.9rem; transform:translateY(100px); opacity:0; transition:all 0.35s cubic-bezier(0.23,1,0.32,1); box-shadow:0 10px 40px rgba(0,0,0,0.5); pointer-events:none; }
+    #toast.show { transform:translateY(0); opacity:1; }
+    #toast.error { border-color:rgba(239,68,68,0.5); background:#1a0a0a; }
+
+    #logout-btn { display:flex; align-items:center; gap:0.5rem; padding:0.6rem 1rem; border-radius:8px; background:transparent; border:1px solid rgba(239,68,68,0.3); color:#f87171; font-size:0.8rem; font-weight:600; cursor:pointer; transition:all 0.25s; margin-top:auto; }
+    #logout-btn:hover { background:rgba(239,68,68,0.1); }
+    .page-accent { height:2px; background:linear-gradient(90deg,transparent,var(--neon),transparent); }
+
+    #loading-screen { position:fixed; inset:0; background:var(--bg); display:flex; align-items:center; justify-content:center; z-index:999; flex-direction:column; gap:1rem; }
+    .spinner { width:40px; height:40px; border:3px solid rgba(0,245,255,0.2); border-top-color:var(--neon); border-radius:50%; animation:spin 0.8s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    @media(max-width:768px) { .sidebar { display:none; } .main-content { padding:1rem; } }
+  </style>
+</head>
+<body>
+
+<!-- Loading screen shown until auth is confirmed -->
+<div id="loading-screen">
+  <div class="spinner"></div>
+  <p style="font-family:'Orbitron',sans-serif;color:#4b5563;font-size:0.8rem;letter-spacing:0.2em;">AUTHENTICATING...</p>
+</div>
+
+<div class="page-accent"></div>
+
+<div class="topbar">
+  <div class="logo">KYR<span>ON</span> <span style="color:#374151;font-size:0.7rem;margin-left:0.5rem;font-weight:400">ADMIN</span></div>
+  <div class="flex items-center gap-3">
+    <span style="color:#6b7280;font-size:0.8rem;font-family:'JetBrains Mono',monospace;" id="admin-email"></span>
+    <a href="index.html" style="color:#6b7280;font-size:0.85rem;text-decoration:none;" onmouseover="this.style.color='#00f5ff'" onmouseout="this.style.color='#6b7280'">↗ Site</a>
+    <button id="logout-btn">🚪 Logout</button>
+  </div>
+</div>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="nav-section">GAME</div>
+    <div style="display:flex;gap:0.5rem;margin-bottom:0.5rem;">
+      <button class="game-btn active" data-game="freefire">🔥 FF</button>
+      <button class="game-btn" data-game="bgmi">🎯 BGMI</button>
+    </div>
+    <div class="nav-section">PANELS</div>
+    <button class="nav-btn active" data-panel="panel-seasons">📅 Seasons</button>
+    <button class="nav-btn" data-panel="panel-matches">⚔️ Matches</button>
+    <button class="nav-btn" data-panel="panel-leaderboard">🏆 Leaderboard</button>
+  </aside>
+
+  <main class="main-content">
+
+    <!-- SEASONS PANEL -->
+    <div class="admin-panel active" id="panel-seasons">
+      <h1 class="font-orbitron" style="font-size:1.5rem;font-weight:900;color:white;margin-bottom:1.5rem;">SEASON MANAGEMENT</h1>
+
+      <div class="section-card">
+        <div class="section-header"><span>➕</span><span class="section-title">CREATE SEASON</span></div>
+        <div class="section-body">
+          <div class="form-group">
+            <label class="field-label">SEASON NAME</label>
+            <input type="text" id="season-name" class="input-field" placeholder="e.g. Summer 2026, Season 1..." />
+          </div>
+          <button class="btn btn-primary" onclick="createSeason()">CREATE SEASON</button>
+        </div>
+      </div>
+
+      <div class="section-card">
+        <div class="section-header"><span>📋</span><span class="section-title">EXISTING SEASONS</span></div>
+        <div id="seasons-list"><span class="empty-msg">Loading...</span></div>
+      </div>
+    </div>
+
+    <!-- MATCHES PANEL -->
+    <div class="admin-panel" id="panel-matches">
+      <div class="breadcrumb">
+        <span>Seasons</span><span>›</span>
+        <span class="current" id="active-season-name">Select a season first</span>
+      </div>
+      <h1 class="font-orbitron" style="font-size:1.5rem;font-weight:900;color:white;margin-bottom:1.5rem;">MATCH MANAGEMENT</h1>
+
+      <div id="no-season-msg" class="section-card">
+        <div class="section-body" style="text-align:center;padding:2rem;">
+          <div style="font-size:2.5rem;margin-bottom:0.75rem;">📅</div>
+          <p style="color:#6b7280;">Go to <strong style="color:white;">Seasons</strong> and click <strong style="color:white;">Manage →</strong> on a season.</p>
+        </div>
+      </div>
+
+      <div id="match-panels" style="display:none;">
+        <div class="section-card">
+          <div class="section-header"><span>➕</span><span class="section-title">CREATE MATCH</span></div>
+          <div class="section-body">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+              <div class="form-group">
+                <label class="field-label">MATCH NAME *</label>
+                <input type="text" id="match-name" class="input-field" placeholder="e.g. Grand Finals..." />
+              </div>
+              <div class="form-group">
+                <label class="field-label">MATCH TYPE *</label>
+                <select id="match-type" class="input-field">
+                  <option value="">Select type...</option>
+                  <option value="solo">Solo</option>
+                  <option value="duo">Duo</option>
+                  <option value="squad">Squad</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="field-label">DATE & TIME *</label>
+                <input type="datetime-local" id="match-dt" class="input-field" />
+              </div>
+              <div class="form-group">
+                <label class="field-label">REGISTRATION LINK</label>
+                <input type="url" id="reg-link" class="input-field" placeholder="https://forms.google.com/..." />
+              </div>
+            </div>
+            <button class="btn btn-primary" onclick="createMatch()">CREATE MATCH</button>
+          </div>
+        </div>
+
+        <div class="section-card">
+          <div class="section-header"><span>⚔️</span><span class="section-title">MATCHES IN THIS SEASON</span></div>
+          <div id="matches-list"><span class="empty-msg">No matches yet</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LEADERBOARD PANEL -->
+    <div class="admin-panel" id="panel-leaderboard">
+      <div class="breadcrumb">
+        <span>Seasons</span><span>›</span>
+        <span id="lb-season-name" style="color:#9ca3af;"></span><span>›</span>
+        <span class="current" id="active-match-name">Select a match first</span>
+        <span class="badge-sm" id="active-match-type" style="margin-left:0.25rem;"></span>
+      </div>
+      <h1 class="font-orbitron" style="font-size:1.5rem;font-weight:900;color:white;margin-bottom:1.5rem;">LEADERBOARD MANAGEMENT</h1>
+
+      <div id="no-match-msg" class="section-card">
+        <div class="section-body" style="text-align:center;padding:2rem;">
+          <div style="font-size:2.5rem;margin-bottom:0.75rem;">🏆</div>
+          <p style="color:#6b7280;">Go to <strong style="color:white;">Matches</strong> and click <strong style="color:white;">Manage →</strong> on a match.</p>
+        </div>
+      </div>
+
+      <div id="lb-panels" style="display:none;">
+        <!-- Registrations -->
+        <div class="section-card">
+          <div class="section-header"><span>📝</span><span class="section-title">REGISTRATIONS</span></div>
+          <div class="section-body">
+            <div id="reg-solo" style="display:none;">
+              <div style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-bottom:1rem;">
+                <div style="flex:1;min-width:140px;" class="form-group">
+                  <label class="field-label">PLAYER NAME</label>
+                  <input type="text" id="solo-name" class="input-field" placeholder="Player name" />
+                </div>
+                <div style="flex:1;min-width:140px;" class="form-group">
+                  <label class="field-label">PLAYER UID</label>
+                  <input type="text" id="solo-uid" class="input-field" placeholder="Game UID" />
+                </div>
+                <div style="display:flex;align-items:flex-end;">
+                  <button class="btn btn-primary" onclick="addSoloRegistration()">ADD PLAYER</button>
+                </div>
+              </div>
+            </div>
+            <div id="reg-team" style="display:none;">
+              <div class="form-group">
+                <label class="field-label">TEAM NAME</label>
+                <input type="text" id="team-name" class="input-field" placeholder="Team name" />
+              </div>
+              <div class="form-group">
+                <label class="field-label">PLAYERS</label>
+                <div id="player-rows">
+                  <div class="player-row" style="display:flex;gap:0.5rem;align-items:center;margin-bottom:0.4rem;">
+                    <input type="text" placeholder="Player 1 Name" class="input-field" style="flex:1;" data-field="name" />
+                    <input type="text" placeholder="UID" class="input-field" style="width:130px;" data-field="uid" />
+                    <label style="display:flex;align-items:center;gap:0.3rem;font-size:0.8rem;color:#9ca3af;white-space:nowrap;">
+                      <input type="checkbox" data-field="leader" style="accent-color:var(--neon);" /> Leader
+                    </label>
+                  </div>
+                </div>
+                <button class="btn btn-secondary" style="margin-top:0.5rem;font-size:0.8rem;padding:0.4rem 0.9rem;" onclick="addPlayerRow()">+ Add Player</button>
+              </div>
+              <button class="btn btn-primary" onclick="addTeamRegistration()">REGISTER TEAM</button>
+            </div>
+            <hr style="border-color:rgba(255,255,255,0.06);margin:1rem 0;" />
+            <div style="font-family:'Orbitron',sans-serif;font-size:0.65rem;letter-spacing:0.15em;color:#4b5563;margin-bottom:0.5rem;">REGISTERED ENTRIES</div>
+            <div id="reg-list"><span class="empty-msg">No registrations yet</span></div>
+          </div>
+        </div>
+
+        <!-- Leaderboard Entry -->
+        <div class="section-card">
+          <div class="section-header"><span>🏆</span><span class="section-title">ENTER MATCH RESULTS</span></div>
+          <div class="section-body">
+
+            <!-- SOLO form -->
+            <div id="lb-solo-form" style="display:none;">
+              <div style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-bottom:1rem;">
+                <div style="flex:1;min-width:120px;" class="form-group">
+                  <label class="field-label">PLAYER NAME</label>
+                  <input type="text" id="lb-solo-name" class="input-field" placeholder="Name" />
+                </div>
+                <div style="flex:1;min-width:120px;" class="form-group">
+                  <label class="field-label">PLAYER UID</label>
+                  <input type="text" id="lb-solo-uid" class="input-field" placeholder="UID" />
+                </div>
+                <div style="width:90px;" class="form-group">
+                  <label class="field-label">KILLS</label>
+                  <input type="number" id="lb-solo-kills" class="input-field" placeholder="0" min="0" />
+                </div>
+                <div style="width:90px;" class="form-group">
+                  <label class="field-label">POSITION</label>
+                  <input type="number" id="lb-solo-pos" class="input-field" placeholder="1" min="1" />
+                </div>
+                <div style="display:flex;align-items:flex-end;">
+                  <button class="btn btn-primary" onclick="saveSoloLb()">SAVE</button>
+                </div>
+              </div>
+              <p style="font-size:0.8rem;color:#4b5563;margin-bottom:0.5rem;">Score = (Total Players − Position + 1) + Kills</p>
+            </div>
+
+            <!-- TEAM form: auto-loads registered teams -->
+            <div id="lb-team-form" style="display:none;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem;">
+                <p style="font-size:0.8rem;color:#6b7280;">Enter <strong style="color:white;">Position</strong> per team and <strong style="color:white;">Kills</strong> per player. Score = (Teams − Pos + 1) + Total Kills.</p>
+                <button class="btn btn-primary" onclick="saveAllTeamResults()">💾 SAVE ALL RESULTS</button>
+              </div>
+              <div id="team-result-cards" style="display:flex;flex-direction:column;gap:1rem;">
+                <span class="empty-msg">Load a match with registered teams to enter results.</span>
+              </div>
+            </div>
+
+            <hr style="border-color:rgba(255,255,255,0.06);margin:1.25rem 0;" />
+            <div style="font-family:'Orbitron',sans-serif;font-size:0.65rem;letter-spacing:0.15em;color:#4b5563;margin-bottom:0.75rem;">CURRENT LEADERBOARD</div>
+            <div id="lb-current"><span class="empty-msg">No entries yet</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ============================================================
+// ALL LOGIC INLINED — no separate JS file imports needed
+// Uses Firebase compat SDK (loaded via script tags above)
+// ============================================================
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCjAc7J1jP0WQGdUxBYaEVPiD578QhWOvA",
+  authDomain: "kyronesports.firebaseapp.com",
+  projectId: "kyronesports",
+  storageBucket: "kyronesports.firebasestorage.app",
+  messagingSenderId: "548905478063",
+  appId: "1:548905478063:web:382cd7412aca9fd532f15a"
+};
+
+// Init Firebase
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+// ── State ──────────────────────────────────────────────────────
+let selectedGame = "freefire";
+let selectedSeasonId = null;
+let selectedSeasonName = "";
+let selectedMatchId = null;
+let selectedMatchType = null;
+
+// Active Firestore listeners (unsubscribe on switch)
+let unsubSeasons = null;
+let unsubMatches = null;
+let unsubRegs = null;
+let unsubLb = null;
+
+// ── Auth Guard ─────────────────────────────────────────────────
+auth.onAuthStateChanged(user => {
+  document.getElementById("loading-screen").style.display = "none";
+  if (!user) {
+    window.location.href = "login.html";
+    return;
+  }
+  document.getElementById("admin-email").textContent = user.email;
+  loadSeasons();
+});
+
+document.getElementById("logout-btn").onclick = () => {
+  auth.signOut().then(() => window.location.href = "login.html");
+};
+
+// ── Toast ──────────────────────────────────────────────────────
+function toast(msg, type = "success") {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.className = "show " + type;
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.className = "", 3500);
+}
+
+// ── Panel Navigation ────────────────────────────────────────────
+function showPanel(id) {
+  document.querySelectorAll(".admin-panel").forEach(p => p.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+  document.querySelectorAll(".nav-btn").forEach(b => {
+    b.classList.toggle("active", b.dataset.panel === id);
+  });
+}
+
+document.querySelectorAll(".nav-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    showPanel(btn.dataset.panel);
+    if (btn.dataset.panel === "panel-seasons") loadSeasons();
+  });
+});
+
+// ── Game Selector ───────────────────────────────────────────────
+document.querySelectorAll(".game-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    selectedGame = btn.dataset.game;
+    document.querySelectorAll(".game-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    loadSeasons();
+    showPanel("panel-seasons");
+  });
+});
+
+// ── Seasons ─────────────────────────────────────────────────────
+function loadSeasons() {
+  const container = document.getElementById("seasons-list");
+  container.innerHTML = '<span class="empty-msg">Loading seasons...</span>';
+
+  if (unsubSeasons) unsubSeasons(); // cancel previous listener
+
+  // FIXED: fetch all seasons, filter client-side — no .where() = no index errors
+  unsubSeasons = db.collection("seasons")
+    .onSnapshot(snap => {
+      // Filter by game client-side
+      const docs = snap.docs
+        .filter(d => d.data().game === selectedGame)
+        .sort((a, b) => (b.data().createdAt?.seconds || 0) - (a.data().createdAt?.seconds || 0));
+
+      if (docs.length === 0) {
+        container.innerHTML = '<span class="empty-msg">No seasons yet — create one above!</span>';
+        return;
+      }
+      container.innerHTML = docs.map(d => `
+        <div class="list-item">
+          <div>
+            <span style="font-weight:700;color:white;">${d.data().seasonName}</span>
+            <span style="font-size:0.7rem;color:#4b5563;margin-left:0.5rem;font-family:'JetBrains Mono',monospace;">${d.id.slice(0,8)}...</span>
+          </div>
+          <div style="display:flex;gap:0.5rem;">
+            <button class="btn btn-sm btn-primary" onclick="selectSeason('${d.id}', '${escQ(d.data().seasonName)}')">Manage →</button>
+            <button class="btn btn-sm btn-danger" onclick="deleteSeason('${d.id}')">Delete</button>
+          </div>
+        </div>`).join("");
+    }, err => {
+      console.error("loadSeasons error:", err);
+      container.innerHTML = `<span class="empty-msg" style="color:#f87171;">⚠ Error: ${err.message}</span>`;
+    });
+}
+
+function createSeason() {
+  const name = document.getElementById("season-name").value.trim();
+  if (!name) return toast("Enter a season name", "error");
+  db.collection("seasons").add({
+    seasonName: name,
+    game: selectedGame,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  }).then(() => {
+    document.getElementById("season-name").value = "";
+    toast("✅ Season created!");
+  }).catch(err => toast("Error: " + err.message, "error"));
+}
+
+function deleteSeason(id) {
+  if (!confirm("Delete this season?")) return;
+  db.collection("seasons").doc(id).delete()
+    .then(() => toast("Season deleted"))
+    .catch(err => toast("Error: " + err.message, "error"));
+}
+
+function selectSeason(id, name) {
+  selectedSeasonId = id;
+  selectedSeasonName = name;
+  document.getElementById("active-season-name").textContent = name;
+  document.getElementById("lb-season-name").textContent = name;
+  document.getElementById("match-panels").style.display = "block";
+  document.getElementById("no-season-msg").style.display = "none";
+  loadMatches(id);
+  showPanel("panel-matches");
+}
+
+// ── Matches ──────────────────────────────────────────────────────
+function loadMatches(seasonId) {
+  const container = document.getElementById("matches-list");
+  container.innerHTML = '<span class="empty-msg">Loading matches...</span>';
+
+  if (unsubMatches) unsubMatches();
+
+  // FIXED: no .where() filter — fetch all, filter client-side to avoid index errors
+  unsubMatches = db.collection("matches")
+    .onSnapshot(snap => {
+      const docs = snap.docs
+        .filter(d => d.data().seasonId === seasonId)
+        .sort((a, b) => (a.data().matchDateTime?.seconds || 0) - (b.data().matchDateTime?.seconds || 0));
+
+      if (docs.length === 0) {
+        container.innerHTML = '<span class="empty-msg">No matches yet — create one above!</span>';
+        return;
+      }
+      container.innerHTML = docs.map(d => {
+        const data = d.data();
+        const dt = data.matchDateTime?.toDate
+          ? data.matchDateTime.toDate().toLocaleString("en-IN", {day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"})
+          : "TBD";
+        return `
+          <div class="list-item">
+            <div>
+              <span style="font-weight:700;color:white;">${data.matchName}</span>
+              <span class="badge-sm" style="margin-left:0.4rem;">${data.matchType}</span>
+              <span style="font-size:0.75rem;color:#4b5563;margin-left:0.5rem;">📅 ${dt}</span>
+            </div>
+            <div style="display:flex;gap:0.5rem;">
+              <button class="btn btn-sm btn-primary" onclick="selectMatch('${d.id}','${escQ(data.matchName)}','${data.matchType}')">Manage →</button>
+              <button class="btn btn-sm btn-danger" onclick="deleteMatch('${d.id}')">Delete</button>
+            </div>
+          </div>`;
+      }).join("");
+    }, err => {
+      container.innerHTML = `<span class="empty-msg" style="color:#f87171;">⚠ Error: ${err.message}</span>`;
+    });
+}
+
+function createMatch() {
+  const name = document.getElementById("match-name").value.trim();
+  const type = document.getElementById("match-type").value;
+  const regLink = document.getElementById("reg-link").value.trim();
+  const dt = document.getElementById("match-dt").value;
+  if (!name || !type || !dt) return toast("Fill all required fields", "error");
+  if (!selectedSeasonId) return toast("No season selected", "error");
+  db.collection("matches").add({
+    matchName: name,
+    matchType: type,
+    registrationLink: regLink || "",
+    matchDateTime: firebase.firestore.Timestamp.fromDate(new Date(dt)),
+    seasonId: selectedSeasonId,
+    game: selectedGame
+  }).then(() => {
+    document.getElementById("match-name").value = "";
+    document.getElementById("match-type").value = "";
+    document.getElementById("reg-link").value = "";
+    document.getElementById("match-dt").value = "";
+    toast("✅ Match created!");
+  }).catch(err => toast("Error: " + err.message, "error"));
+}
+
+function deleteMatch(id) {
+  if (!confirm("Delete this match?")) return;
+  db.collection("matches").doc(id).delete()
+    .then(() => toast("Match deleted"))
+    .catch(err => toast("Error: " + err.message, "error"));
+}
+
+function selectMatch(id, name, type) {
+  selectedMatchId = id;
+  selectedMatchType = type;
+  document.getElementById("active-match-name").textContent = name;
+  document.getElementById("active-match-type").textContent = type;
+  document.getElementById("lb-panels").style.display = "block";
+  document.getElementById("no-match-msg").style.display = "none";
+  // Show/hide forms based on match type
+  document.getElementById("reg-solo").style.display = type === "solo" ? "block" : "none";
+  document.getElementById("reg-team").style.display = type !== "solo" ? "block" : "none";
+  document.getElementById("lb-solo-form").style.display = type === "solo" ? "block" : "none";
+  document.getElementById("lb-team-form").style.display = type !== "solo" ? "block" : "none";
+  loadRegistrations(id, type);
+  loadLbCurrent(id, type);
+  showPanel("panel-leaderboard");
+}
+
+// ── Registrations ────────────────────────────────────────────────
+function loadRegistrations(matchId, type) {
+  const container = document.getElementById("reg-list");
+  if (unsubRegs) unsubRegs();
+  unsubRegs = db.collection("registrations").doc(matchId).collection("entries")
+    .onSnapshot(snap => {
+      if (snap.empty) {
+        container.innerHTML = '<span class="empty-msg">No registrations yet.</span>';
+        if (type !== "solo") renderTeamResultCards([]);
+        return;
+      }
+      container.innerHTML = snap.docs.map(d => {
+        const data = d.data();
+        if (type === "solo") {
+          return `<div class="list-item"><span style="color:white;font-weight:600;">${data.playerName}</span><span style="color:#6b7280;font-family:'JetBrains Mono',monospace;font-size:0.8rem;">${data.playerUID}</span></div>`;
+        }
+        return `<div class="list-item" style="flex-direction:column;align-items:flex-start;gap:0.3rem;">
+          <span style="color:var(--neon);font-weight:700;">${data.teamName}</span>
+          <div style="display:flex;flex-wrap:wrap;gap:0.75rem;">
+            ${(data.players||[]).map(p=>`<span style="font-size:0.8rem;color:#d1d5db;">${p.name} <span style="color:#4b5563;">${p.uid}</span>${p.isLeader?' 👑':''}</span>`).join("")}
+          </div>
+        </div>`;
+      }).join("");
+      // Render team result input cards whenever registrations update
+      if (type !== "solo") renderTeamResultCards(snap.docs);
+    }, err => { container.innerHTML = `<span class="empty-msg" style="color:#f87171;">⚠ ${err.message}</span>`; });
+}
+
+function addSoloRegistration() {
+  const name = document.getElementById("solo-name").value.trim();
+  const uid = document.getElementById("solo-uid").value.trim();
+  if (!name || !uid) return toast("Fill name and UID", "error");
+  db.collection("registrations").doc(selectedMatchId).collection("entries").add({ playerName: name, playerUID: uid })
+    .then(() => { document.getElementById("solo-name").value=""; document.getElementById("solo-uid").value=""; toast("✅ Player registered!"); })
+    .catch(err => toast("Error: " + err.message, "error"));
+}
+
+let playerCount = 1;
+function addPlayerRow() {
+  playerCount++;
+  const row = document.createElement("div");
+  row.className = "player-row";
+  row.style.cssText = "display:flex;gap:0.5rem;align-items:center;margin-bottom:0.4rem;";
+  row.innerHTML = `
+    <input type="text" placeholder="Player ${playerCount} Name" class="input-field" style="flex:1;" data-field="name" />
+    <input type="text" placeholder="UID" class="input-field" style="width:130px;" data-field="uid" />
+    <label style="display:flex;align-items:center;gap:0.3rem;font-size:0.8rem;color:#9ca3af;white-space:nowrap;">
+      <input type="checkbox" data-field="leader" style="accent-color:var(--neon);" /> Leader
+    </label>
+    <button class="btn btn-sm btn-danger" onclick="this.parentElement.remove()">✕</button>`;
+  document.getElementById("player-rows").appendChild(row);
+}
+
+function addTeamRegistration() {
+  const teamName = document.getElementById("team-name").value.trim();
+  if (!teamName) return toast("Enter team name", "error");
+  const rows = document.querySelectorAll("#player-rows .player-row");
+  const players = Array.from(rows).map(r => ({
+    name: r.querySelector("[data-field=name]").value.trim(),
+    uid: r.querySelector("[data-field=uid]").value.trim(),
+    isLeader: r.querySelector("[data-field=leader]").checked
+  })).filter(p => p.name && p.uid);
+  if (!players.length) return toast("Add at least one player", "error");
+  db.collection("registrations").doc(selectedMatchId).collection("entries").add({ teamName, players })
+    .then(() => {
+      document.getElementById("team-name").value = "";
+      document.getElementById("player-rows").innerHTML = `
+        <div class="player-row" style="display:flex;gap:0.5rem;align-items:center;margin-bottom:0.4rem;">
+          <input type="text" placeholder="Player 1 Name" class="input-field" style="flex:1;" data-field="name" />
+          <input type="text" placeholder="UID" class="input-field" style="width:130px;" data-field="uid" />
+          <label style="display:flex;align-items:center;gap:0.3rem;font-size:0.8rem;color:#9ca3af;white-space:nowrap;">
+            <input type="checkbox" data-field="leader" style="accent-color:var(--neon);" /> Leader
+          </label>
+        </div>`;
+      playerCount = 1;
+      toast("✅ Team registered!");
+    }).catch(err => toast("Error: " + err.message, "error"));
+}
+
+// ── Leaderboard ──────────────────────────────────────────────────
+
+// Live leaderboard display (bottom of panel)
+function loadLbCurrent(matchId, type) {
+  const container = document.getElementById("lb-current");
+  if (unsubLb) unsubLb();
+  unsubLb = db.collection("matchLeaderboards").doc(matchId).collection("entries")
+    .onSnapshot(snap => {
+      if (snap.empty) { container.innerHTML = '<span class="empty-msg">No entries yet.</span>'; return; }
+      const sorted = snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.totalScore||b.points||0)-(a.totalScore||a.points||0));
+      const isSolo = type === "solo";
+      const thLabel = isSolo ? "PLAYER" : "TEAM";
+      container.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:0.88rem;">
+        <thead><tr style="border-bottom:1px solid rgba(255,255,255,0.08);">
+          <th style="text-align:left;padding:0.5rem 0.75rem;color:#4b5563;font-family:'Orbitron',sans-serif;font-size:0.62rem;letter-spacing:0.1em;">#</th>
+          <th style="text-align:left;padding:0.5rem 0.75rem;color:#4b5563;font-family:'Orbitron',sans-serif;font-size:0.62rem;letter-spacing:0.1em;">${thLabel}</th>
+          <th style="text-align:right;padding:0.5rem 0.75rem;color:#4b5563;font-family:'Orbitron',sans-serif;font-size:0.62rem;letter-spacing:0.1em;">POS</th>
+          <th style="text-align:right;padding:0.5rem 0.75rem;color:#4b5563;font-family:'Orbitron',sans-serif;font-size:0.62rem;letter-spacing:0.1em;">KILLS</th>
+          <th style="text-align:right;padding:0.5rem 0.75rem;color:#4b5563;font-family:'Orbitron',sans-serif;font-size:0.62rem;letter-spacing:0.1em;">SCORE</th>
+          <th style="text-align:right;padding:0.5rem 0.75rem;color:#4b5563;font-family:'Orbitron',sans-serif;font-size:0.62rem;letter-spacing:0.1em;">DEL</th>
+        </tr></thead>
+        <tbody>${sorted.map((e,i)=>{
+          const label = isSolo ? e.playerName : e.teamName;
+          const score = e.totalScore ?? e.points ?? 0;
+          return `<tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+            <td style="padding:0.55rem 0.75rem;color:#6b7280;font-family:'JetBrains Mono',monospace;">${i+1}</td>
+            <td style="padding:0.55rem 0.75rem;color:white;font-weight:600;">${label}</td>
+            <td style="padding:0.55rem 0.75rem;text-align:right;color:#9ca3af;">${e.position??'—'}</td>
+            <td style="padding:0.55rem 0.75rem;text-align:right;color:#9ca3af;">${e.totalKills??e.kills??'—'}</td>
+            <td style="padding:0.55rem 0.75rem;text-align:right;color:var(--neon);font-weight:700;font-family:'Orbitron',sans-serif;">${score}</td>
+            <td style="padding:0.55rem 0.75rem;text-align:right;">
+              <button class="btn btn-sm btn-danger" onclick="deleteLbEntry('${e.id}')">✕</button>
+            </td>
+          </tr>`;
+        }).join("")}</tbody></table>`;
+    }, err => { container.innerHTML = `<span class="empty-msg" style="color:#f87171;">⚠ ${err.message}</span>`; });
+}
+
+// ── SOLO: save single player result ──────────────────────────────
+function saveSoloLb() {
+  const playerName = document.getElementById("lb-solo-name").value.trim();
+  const playerUID  = document.getElementById("lb-solo-uid").value.trim();
+  const kills      = parseInt(document.getElementById("lb-solo-kills").value) || 0;
+  const position   = parseInt(document.getElementById("lb-solo-pos").value)   || 1;
+  if (!playerName || !playerUID) return toast("Fill name and UID", "error");
+
+  // We need total players to calculate pos score — fetch current count from match leaderboard
+  db.collection("matchLeaderboards").doc(selectedMatchId).collection("entries").get().then(snap => {
+    // totalPlayers = existing entries + 1 (this new one), or use position as floor
+    const totalPlayers = Math.max(snap.size + 1, position);
+    const posScore   = totalPlayers - position + 1;
+    const totalScore = posScore + kills;
+    const entryId    = playerUID.replace(/[^a-zA-Z0-9_-]/g, "_");
+
+    return db.collection("matchLeaderboards").doc(selectedMatchId).collection("entries").doc(entryId)
+      .set({ playerName, playerUID, kills, position, posScore, totalScore });
+  }).then(() => {
+    document.getElementById("lb-solo-name").value = "";
+    document.getElementById("lb-solo-uid").value  = "";
+    document.getElementById("lb-solo-kills").value = "";
+    document.getElementById("lb-solo-pos").value   = "";
+    toast("✅ Entry saved!");
+    // Update seasonal — use totalScore for solo
+    updateSeasonalLb(playerName, playerUID, parseInt(document.getElementById("lb-solo-kills").value)||0, position);
+  }).catch(err => toast("Error: " + err.message, "error"));
+}
+
+// ── TEAM: render input cards from registered teams ────────────────
+function renderTeamResultCards(regDocs) {
+  const container = document.getElementById("team-result-cards");
+  if (!regDocs.length) {
+    container.innerHTML = '<span class="empty-msg">No teams registered yet. Register teams above first.</span>';
+    return;
+  }
+  const totalTeams = regDocs.length;
+  container.innerHTML = regDocs.map((doc, ti) => {
+    const data = doc.data();
+    const teamId = doc.id;
+    const players = data.players || [];
+    const playerRows = players.map((p, pi) => `
+      <div style="display:flex;align-items:center;gap:0.75rem;padding:0.5rem 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+        <span style="flex:1;color:${p.isLeader?'var(--neon)':' #d1d5db'};font-size:0.9rem;">${p.name}${p.isLeader?' 👑':''}</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:#4b5563;min-width:80px;">${p.uid}</span>
+        <div style="display:flex;align-items:center;gap:0.4rem;">
+          <label style="font-family:'Orbitron',sans-serif;font-size:0.6rem;letter-spacing:0.1em;color:#4b5563;">KILLS</label>
+          <input type="number" min="0" value="0" placeholder="0"
+            class="input-field" style="width:70px;padding:0.4rem 0.5rem;text-align:center;"
+            data-team="${teamId}" data-player="${pi}" data-uid="${p.uid}" data-name="${p.name}" data-kills="true" />
+        </div>
+      </div>`).join("");
+
+    return `
+      <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:10px;overflow:hidden;" data-team-card="${teamId}" data-team-name="${data.teamName.replace(/"/g,'&quot;')}">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:0.85rem 1rem;background:rgba(0,245,255,0.04);border-bottom:1px solid rgba(255,255,255,0.07);">
+          <span style="font-family:'Orbitron',sans-serif;font-weight:700;color:var(--neon);font-size:0.95rem;">${data.teamName}</span>
+          <div style="display:flex;align-items:center;gap:0.5rem;">
+            <label style="font-family:'Orbitron',sans-serif;font-size:0.6rem;letter-spacing:0.1em;color:#6b7280;">POSITION</label>
+            <input type="number" min="1" max="${totalTeams}" placeholder="1"
+              class="input-field" style="width:70px;padding:0.4rem 0.5rem;text-align:center;"
+              data-team="${teamId}" data-position="true" />
+            <span style="font-size:0.75rem;color:#4b5563;">/ ${totalTeams}</span>
+          </div>
+        </div>
+        <div style="padding:0 1rem 0.5rem;">
+          ${playerRows}
+        </div>
+      </div>`;
+  }).join("");
+}
+
+// ── TEAM: save all results at once ────────────────────────────────
+async function saveAllTeamResults() {
+  const cards = document.querySelectorAll("[data-team-card]");
+  if (!cards.length) return toast("No teams to save", "error");
+
+  const totalTeams = cards.length;
+  const batch = [];
+
+  // Collect all data first and validate
+  for (const card of cards) {
+    const teamId   = card.dataset.teamCard;
+    const posInput = card.querySelector("[data-position]");
+    const position = parseInt(posInput?.value);
+    if (!position || position < 1 || position > totalTeams) {
+      return toast(`Enter a valid position (1–${totalTeams}) for each team`, "error");
+    }
+    const posScore = totalTeams - position + 1;
+
+    // Gather player kills
+    const killInputs = card.querySelectorAll("[data-kills]");
+    let totalKills = 0;
+    const playerResults = [];
+    killInputs.forEach(inp => {
+      const kills = parseInt(inp.value) || 0;
+      totalKills += kills;
+      playerResults.push({
+        name:  inp.dataset.name,
+        uid:   inp.dataset.uid,
+        kills,
+        playerIndex: parseInt(inp.dataset.player)
+      });
+    });
+
+    const totalScore = posScore + totalKills;
+    // We need teamName — get it from the card header
+    const teamName = card.dataset.teamName || teamId;
+
+    batch.push({ teamId, teamName, position, posScore, totalKills, totalScore, playerResults });
+  }
+
+  // Write to Firestore
+  try {
+    const writes = [];
+
+    for (const t of batch) {
+      // Match leaderboard — team entry
+      writes.push(
+        db.collection("matchLeaderboards").doc(selectedMatchId).collection("entries").doc(t.teamId)
+          .set({
+            teamName:   t.teamName,
+            position:   t.position,
+            posScore:   t.posScore,
+            totalKills: t.totalKills,
+            totalScore: t.totalScore,
+            points:     t.totalScore   // keep 'points' field for display compatibility
+          })
+      );
+
+      // Seasonal leaderboard — individual player entries
+      for (const p of t.playerResults) {
+        if (!p.uid) continue;
+        const playerScore = t.posScore + p.kills;  // each player gets posScore + their own kills
+        writes.push(updateSeasonalLb(p.name, p.uid, playerScore));
+      }
+    }
+
+    await Promise.all(writes);
+    toast("✅ All results saved!");
+  } catch (err) {
+    toast("Error: " + err.message, "error");
+  }
+}
+
+function deleteLbEntry(entryId) {
+  db.collection("matchLeaderboards").doc(selectedMatchId).collection("entries").doc(entryId).delete()
+    .then(() => toast("Entry removed"))
+    .catch(err => toast("Error: " + err.message, "error"));
+}
+
+// ── Seasonal leaderboard update (per player) ──────────────────────
+function updateSeasonalLb(playerName, playerUID, score) {
+  if (!selectedSeasonId || !playerUID) return Promise.resolve();
+  const entryId = playerUID.replace(/[^a-zA-Z0-9_-]/g, "_");
+  const ref = db.collection("seasonLeaderboards").doc(selectedSeasonId).collection("entries").doc(entryId);
+  return ref.get().then(docSnap => {
+    if (docSnap.exists) {
+      const cur = docSnap.data();
+      return ref.update({
+        totalPoints:  (cur.totalPoints  || 0) + score,
+        matchesPlayed:(cur.matchesPlayed|| 0) + 1
+      });
+    } else {
+      return ref.set({ playerName, playerUID, totalPoints: score, matchesPlayed: 1 });
+    }
+  }).catch(err => console.error("Seasonal lb error:", err));
+}
+
+// ── Helpers ──────────────────────────────────────────────────────
+function escQ(str) {
+  return (str || "").replace(/\\/g,"\\\\").replace(/'/g,"\\'");
+}
+</script>
+</body>
+</html>

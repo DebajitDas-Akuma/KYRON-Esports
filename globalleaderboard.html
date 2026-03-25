@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>KYRON Esports — Global Leaderboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=Orbitron:wght@700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <style>
+    :root{--neon:#00f5ff;--neon2:#7b2fff;--bg:#050810;--card:#0d1117;}
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:'Rajdhani',sans-serif;background:var(--bg);color:#e0e0e0;min-height:100vh;}
+    a{text-decoration:none;color:inherit;}
+    body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,245,255,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(0,245,255,0.02) 1px,transparent 1px);background-size:60px 60px;pointer-events:none;z-index:0;}
+
+    /* NAV */
+    nav{position:sticky;top:0;z-index:50;backdrop-filter:blur(20px);background:rgba(5,8,16,0.9);border-bottom:1px solid rgba(0,245,255,0.08);}
+    .nav-inner{max-width:1100px;margin:0 auto;padding:0 1.5rem;height:60px;display:flex;align-items:center;justify-content:space-between;}
+    .nav-logo{font-family:'Orbitron',sans-serif;font-weight:700;font-size:1.2rem;color:white;}
+    .nav-logo span{color:var(--neon);}
+    .nav-links{display:flex;align-items:center;gap:1.25rem;}
+    .nav-links a{font-size:0.78rem;font-weight:700;letter-spacing:0.08em;color:#6b7280;transition:color 0.2s;}
+    .nav-links a:hover{color:var(--neon);}
+
+    /* PAGE HEADER */
+    .page-header{background:linear-gradient(180deg,rgba(0,245,255,0.05) 0%,transparent 100%);border-bottom:1px solid rgba(255,255,255,0.05);padding:3rem 0 2.5rem;}
+    .inner{max-width:1100px;margin:0 auto;padding:0 1.5rem;position:relative;z-index:1;}
+    .back-link{display:inline-flex;align-items:center;gap:0.4rem;color:#6b7280;font-size:0.85rem;margin-bottom:1.5rem;transition:color 0.2s;}
+    .back-link:hover{color:var(--neon);}
+    .page-title{font-family:'Orbitron',sans-serif;font-size:2.5rem;font-weight:900;color:white;margin-bottom:0.5rem;}
+    .page-subtitle{color:#6b7280;font-size:1rem;line-height:1.6;}
+    .page-subtitle b{color:var(--neon);}
+
+    /* GAME TABS */
+    .game-tabs{display:flex;gap:1rem;margin:2.5rem 0 2rem;flex-wrap:wrap;}
+    .game-tab{display:flex;align-items:center;gap:0.6rem;padding:0.75rem 1.75rem;border-radius:10px;border:1px solid rgba(255,255,255,0.08);background:var(--card);font-family:'Orbitron',sans-serif;font-size:0.8rem;font-weight:700;letter-spacing:0.1em;color:#6b7280;cursor:pointer;transition:all 0.25s;}
+    .game-tab.active-ff{border-color:var(--neon);color:var(--neon);background:rgba(0,245,255,0.08);box-shadow:0 0 20px rgba(0,245,255,0.1);}
+    .game-tab.active-bgmi{border-color:var(--neon2);color:var(--neon2);background:rgba(123,47,255,0.08);box-shadow:0 0 20px rgba(123,47,255,0.12);}
+    .game-tab:hover:not(.active-ff):not(.active-bgmi){border-color:rgba(255,255,255,0.2);color:#e0e0e0;}
+
+    /* SEARCH */
+    .search-wrap{margin-bottom:1.5rem;}
+    .search-box{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);color:white;border-radius:8px;padding:0.65rem 1rem;font-family:'JetBrains Mono',monospace;font-size:0.85rem;outline:none;transition:border-color 0.3s;width:100%;max-width:340px;}
+    .search-box:focus{border-color:var(--neon);}
+    .search-box::placeholder{color:#374151;}
+
+    /* INFO BAR */
+    .info-bar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem;margin-bottom:1.25rem;}
+    .info-bar h2{font-family:'Orbitron',sans-serif;font-size:1.1rem;font-weight:700;color:white;}
+    .info-note{font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:#4b5563;}
+
+    /* TABLE CARD */
+    .lb-card{background:var(--card);border:1px solid rgba(255,255,255,0.07);border-radius:14px;overflow:hidden;}
+    table{width:100%;border-collapse:collapse;}
+    thead th{font-family:'Orbitron',sans-serif;font-size:0.63rem;letter-spacing:0.12em;color:#4b5563;padding:0.85rem 1.1rem;border-bottom:1px solid rgba(255,255,255,0.07);text-align:left;white-space:nowrap;}
+    thead th.r{text-align:right;}
+    tbody td{padding:0.95rem 1.1rem;border-bottom:1px solid rgba(255,255,255,0.04);vertical-align:middle;}
+    tbody tr:last-child td{border-bottom:none;}
+    tbody tr{transition:background 0.15s;}
+    tbody tr:hover{background:rgba(255,255,255,0.025);}
+
+    /* Rank styles */
+    .rank-num{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:0.9rem;}
+    .rank-1 .rank-num{color:#fbbf24;}
+    .rank-2 .rank-num{color:#94a3b8;}
+    .rank-3 .rank-num{color:#cd7c45;}
+    .rank-other .rank-num{color:#4b5563;}
+
+    /* Top 3 row glow */
+    .rank-1{background:rgba(251,191,36,0.03);}
+    .rank-2{background:rgba(148,163,184,0.02);}
+    .rank-3{background:rgba(205,124,69,0.02);}
+
+    .player-name{color:white;font-weight:600;font-size:1rem;}
+    .player-uid{font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:#4b5563;margin-top:0.15rem;}
+    .avg-score{font-family:'Orbitron',sans-serif;font-weight:900;font-size:1.15rem;text-align:right;}
+    .avg-ff{color:var(--neon);}
+    .avg-bgmi{color:var(--neon2);}
+    .seasons-played{text-align:right;color:#6b7280;font-family:'JetBrains Mono',monospace;font-size:0.8rem;}
+    .total-pts{text-align:right;color:#6b7280;font-size:0.85rem;}
+
+    /* Empty / loading */
+    .empty-state{padding:5rem 2rem;text-align:center;}
+    .empty-state .icon{font-size:3.5rem;margin-bottom:1rem;}
+    .empty-state p{font-family:'Orbitron',sans-serif;color:#4b5563;font-size:0.9rem;}
+    .empty-state small{color:#374151;font-size:0.8rem;margin-top:0.5rem;display:block;}
+
+    /* Spinner */
+    .spinner{width:32px;height:32px;border:3px solid rgba(0,245,255,0.15);border-top-color:var(--neon);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 1rem;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+
+    footer{border-top:1px solid rgba(255,255,255,0.05);padding:2rem;text-align:center;position:relative;z-index:1;margin-top:3rem;}
+    footer span{font-family:'Orbitron',sans-serif;font-weight:700;color:white;}
+    footer b{color:var(--neon);}
+
+    @media(max-width:600px){.page-title{font-size:1.75rem;}.nav-links a:not(:last-child){display:none;}}
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="nav-inner">
+      <a href="index.html" class="nav-logo">KYR<span>ON</span></a>
+      <div class="nav-links">
+        <a href="game.html?g=freefire">FREE FIRE</a>
+        <a href="game.html?g=bgmi">BGMI</a>
+        <a href="globalleaderboard.html" style="color:var(--neon);">GLOBAL LB</a>
+        <div style="display:flex;align-items:center;gap:0.85rem;"><a href="https://www.instagram.com/kyrongroups?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" target="_blank" rel="noopener" title="Instagram" style="color:#e1306c;transition:opacity 0.2s;" onmouseover="this.style.opacity='0.7'" onmouseout="this.style.opacity='1'"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg></a>
+        <a href="https://chat.whatsapp.com/JHzE43UkpW1F8ZRwAvO8nV" target="_blank" rel="noopener" title="WhatsApp" style="color:#25d366;transition:opacity 0.2s;" onmouseover="this.style.opacity='0.7'" onmouseout="this.style.opacity='1'"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></a>
+        <a href="https://www.youtube.com/@kyron-esports" target="_blank" rel="noopener" title="YouTube" style="color:#ff0000;transition:opacity 0.2s;" onmouseover="this.style.opacity='0.7'" onmouseout="this.style.opacity='1'"><svg width="20" height="14" viewBox="0 0 24 17" fill="currentColor"><path d="M23.495 2.205a3.02 3.02 0 00-2.127-2.138C19.505 0 12 0 12 0S4.495 0 2.632.067A3.02 3.02 0 00.505 2.205 31.247 31.247 0 000 8.649a31.247 31.247 0 00.505 6.444 3.02 3.02 0 002.127 2.138C4.495 17.3 12 17.3 12 17.3s7.505 0 9.368-.069a3.02 3.02 0 002.127-2.138A31.247 31.247 0 0024 8.65a31.247 31.247 0 00-.505-6.444zM9.609 12.352V4.947l6.264 3.703-6.264 3.702z"/></svg></a></div>
+        <a href="login.html" style="padding:0.4rem 1rem;border:1px solid var(--neon);color:var(--neon);font-family:'Orbitron',sans-serif;font-size:0.7rem;font-weight:700;letter-spacing:0.1em;border-radius:6px;">ADMIN</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- PAGE HEADER -->
+  <div class="page-header">
+    <div class="inner">
+      <a href="index.html" class="back-link">← Back to Home</a>
+      <div class="page-title">🌐 GLOBAL LEADERBOARD</div>
+      <p class="page-subtitle">
+        Rankings based on <b>average score per season</b> — players are ranked by their average points
+        across every season they've participated in, separately for each game.
+      </p>
+    </div>
+  </div>
+
+  <div class="inner" style="padding-top:0.5rem;padding-bottom:3rem;">
+
+    <!-- Game selector tabs -->
+    <div class="game-tabs">
+      <div class="game-tab active-ff" id="tab-ff" onclick="switchGame('freefire')">
+        🔥 FREE FIRE
+      </div>
+      <div class="game-tab" id="tab-bgmi" onclick="switchGame('bgmi')">
+        🎯 BGMI
+      </div>
+    </div>
+
+    <!-- Search -->
+    <div class="search-wrap">
+      <input type="text" id="search-box" class="search-box" placeholder="Search player name or UID..." oninput="filterTable(this.value)" />
+    </div>
+
+    <!-- Info + count -->
+    <div class="info-bar">
+      <h2 id="lb-heading">FREE FIRE — Global Rankings</h2>
+      <span class="info-note" id="lb-note">Loading...</span>
+    </div>
+
+    <!-- Leaderboard table -->
+    <div class="lb-card" id="lb-card">
+      <div class="empty-state">
+        <div class="spinner"></div>
+        <p>Loading global leaderboard...</p>
+      </div>
+    </div>
+
+  </div>
+
+  <footer><span>KYR<b>ON</b> Esports</span></footer>
+
+  <script>
+    firebase.initializeApp({
+      apiKey:"AIzaSyCjAc7J1jP0WQGdUxBYaEVPiD578QhWOvA",
+      authDomain:"kyronesports.firebaseapp.com",
+      projectId:"kyronesports",
+      storageBucket:"kyronesports.firebasestorage.app",
+      messagingSenderId:"548905478063",
+      appId:"1:548905478063:web:382cd7412aca9fd532f15a"
+    });
+    const db = firebase.firestore();
+
+    let currentGame = 'freefire';
+    let allPlayers = [];   // full computed list for current game
+
+    // ── Switch game tab ───────────────────────────────────────
+    function switchGame(game) {
+      currentGame = game;
+      document.getElementById('tab-ff').className   = 'game-tab' + (game === 'freefire' ? ' active-ff' : '');
+      document.getElementById('tab-bgmi').className = 'game-tab' + (game === 'bgmi'     ? ' active-bgmi' : '');
+      document.getElementById('lb-heading').textContent = (game === 'freefire' ? 'FREE FIRE' : 'BGMI') + ' — Global Rankings';
+      document.getElementById('search-box').value = '';
+      loadGlobalLeaderboard(game);
+    }
+
+    // ── Main loader ───────────────────────────────────────────
+    async function loadGlobalLeaderboard(game) {
+      const card = document.getElementById('lb-card');
+      card.innerHTML = '<div class="empty-state"><div class="spinner"></div><p>Computing rankings...</p></div>';
+      document.getElementById('lb-note').textContent = 'Loading...';
+
+      try {
+        // 1. Get all seasons for this game
+        const seasonsSnap = await db.collection('seasons').get();
+        const seasons = seasonsSnap.docs
+          .filter(d => d.data().game === game)
+          .map(d => d.id);
+
+        if (seasons.length === 0) {
+          card.innerHTML = '<div class="empty-state"><div class="icon">🏆</div><p>No seasons yet for this game</p><small>Create seasons and enter match results to populate the global leaderboard.</small></div>';
+          document.getElementById('lb-note').textContent = '0 players';
+          return;
+        }
+
+        // 2. For each season, fetch its leaderboard entries
+        //    Build a map: playerUID → { name, uid, seasons: [totalPoints...] }
+        const playerMap = {};
+
+        for (const seasonId of seasons) {
+          const entriesSnap = await db.collection('seasonLeaderboards').doc(seasonId).collection('entries').get();
+          entriesSnap.docs.forEach(doc => {
+            const d = doc.data();
+            if (!d.playerUID) return;
+            const uid = d.playerUID;
+            if (!playerMap[uid]) {
+              playerMap[uid] = { name: d.playerName, uid, seasonScores: [] };
+            }
+            playerMap[uid].seasonScores.push(d.totalPoints || 0);
+          });
+        }
+
+        // 3. Compute average score per player
+        allPlayers = Object.values(playerMap).map(p => {
+          const total    = p.seasonScores.reduce((s, x) => s + x, 0);
+          const avg      = total / p.seasonScores.length;
+          return {
+            name:          p.name,
+            uid:           p.uid,
+            avgScore:      Math.round(avg * 10) / 10,   // 1 decimal
+            totalPoints:   total,
+            seasonsPlayed: p.seasonScores.length
+          };
+        }).sort((a, b) => b.avgScore - a.avgScore);
+
+        document.getElementById('lb-note').textContent =
+          `${allPlayers.length} player${allPlayers.length !== 1 ? 's' : ''} across ${seasons.length} season${seasons.length !== 1 ? 's' : ''}`;
+
+        renderTable(allPlayers, game);
+
+      } catch (err) {
+        card.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p style="color:#f87171;">Error: ${err.message}</p></div>`;
+      }
+    }
+
+    // ── Render table ──────────────────────────────────────────
+    function renderTable(players, game) {
+      const card = document.getElementById('lb-card');
+      if (!players.length) {
+        card.innerHTML = '<div class="empty-state"><div class="icon">🏆</div><p>No players found</p><small>Enter match results for seasons to build the global leaderboard.</small></div>';
+        return;
+      }
+      const isBGMI   = game === 'bgmi';
+      const avgClass = isBGMI ? 'avg-bgmi' : 'avg-ff';
+      const medals   = ['🥇','🥈','🥉'];
+      const rankClass = ['rank-1','rank-2','rank-3'];
+
+      card.innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th style="width:55px;">#</th>
+              <th>PLAYER</th>
+              <th class="r">AVG SCORE</th>
+              <th class="r">TOTAL PTS</th>
+              <th class="r">SEASONS</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${players.map((p, i) => {
+              const rc = rankClass[i] || 'rank-other';
+              const medal = i < 3 ? medals[i] : i + 1;
+              return `
+                <tr class="${rc}">
+                  <td><span class="rank-num">${medal}</span></td>
+                  <td>
+                    <div class="player-name">${p.name}</div>
+                    <div class="player-uid">${p.uid}</div>
+                  </td>
+                  <td><span class="avg-score ${avgClass}">${p.avgScore}</span></td>
+                  <td class="total-pts">${p.totalPoints}</td>
+                  <td class="seasons-played">${p.seasonsPlayed}</td>
+                </tr>`;
+            }).join('')}
+          </tbody>
+        </table>`;
+    }
+
+    // ── Search / filter ───────────────────────────────────────
+    function filterTable(query) {
+      const q = query.toLowerCase().trim();
+      if (!q) {
+        renderTable(allPlayers, currentGame);
+        return;
+      }
+      const filtered = allPlayers.filter(p =>
+        p.name.toLowerCase().includes(q) || p.uid.toLowerCase().includes(q)
+      );
+      renderTable(filtered, currentGame);
+    }
+
+    // ── Init ──────────────────────────────────────────────────
+    loadGlobalLeaderboard('freefire');
+  </script>
+</body>
+</html>
